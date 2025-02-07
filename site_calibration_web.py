@@ -27,72 +27,82 @@ st.subheader("Enter Local Site Coordinates")
 local_df = st.data_editor(default_local_data, hide_index=True, num_rows="fixed", key="local_data")
 
 def compute_calibration(rtk_df, local_df):
-    """ Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method. """
+    """ Iteratively removes reference marks with residuals > 0.030 until a valid solution is found. """
 
-    # Convert DataFrame values to float
-    rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
-    local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
-    
-    # Extract RTK coordinates (Easting, Northing, Height)
-    measured_points = rtk_df[["Easting", "Northing", "Height"]].values
+    excluded_marks = []
 
-    # Extract Local Site coordinates (X, Y, Z)
-    local_points = local_df[["X", "Y", "Z"]].values
+    while True:
+        # Convert DataFrame values to float
+        rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
+        local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
+        
+        # Extract RTK coordinates (Easting, Northing, Height)
+        measured_points = rtk_df[["Easting", "Northing", "Height"]].values
 
-    # Compute centroids
-    centroid_measured = np.mean(measured_points, axis=0)
-    centroid_local = np.mean(local_points, axis=0)
+        # Extract Local Site coordinates (X, Y, Z)
+        local_points = local_df[["X", "Y", "Z"]].values
 
-    # Center the points
-    measured_centered = measured_points - centroid_measured
-    local_centered = local_points - centroid_local
+        # Compute centroids
+        centroid_measured = np.mean(measured_points, axis=0)
+        centroid_local = np.mean(local_points, axis=0)
 
-    # Compute optimal rotation using SVD
-    U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
-    R_matrix = np.dot(U, Vt)
+        # Center the points
+        measured_centered = measured_points - centroid_measured
+        local_centered = local_points - centroid_local
 
-    # Ensure R_matrix is a proper rotation matrix
-    if np.linalg.det(R_matrix) < 0:
-        U[:, -1] *= -1
+        # Compute optimal rotation using SVD
+        U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
         R_matrix = np.dot(U, Vt)
 
-    # Convert rotation matrix to Euler angles (XYZ convention)
-    rotation = R.from_matrix(R_matrix)
-    euler_angles = rotation.as_euler('xyz', degrees=True)
+        # Ensure R_matrix is a proper rotation matrix
+        if np.linalg.det(R_matrix) < 0:
+            U[:, -1] *= -1
+            R_matrix = np.dot(U, Vt)
 
-    # Extract pitch, roll, and heading
-    pitch = euler_angles[1]
-    roll = euler_angles[0]
-    heading = (euler_angles[2] + 360) % 360  # Adjust heading to 0-360°
+        # Convert rotation matrix to Euler angles (XYZ convention)
+        rotation = R.from_matrix(R_matrix)
+        euler_angles = rotation.as_euler('xyz', degrees=True)
 
-    # Compute translation vector
-    translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
+        # Extract pitch, roll, and heading
+        pitch = euler_angles[1]
+        roll = euler_angles[0]
+        heading = (euler_angles[2] + 360) % 360  # Adjust heading to 0-360°
 
-    # Transform measured points
-    transformed_points = np.dot(measured_points, R_matrix.T) + translation
+        # Compute translation vector
+        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
 
-    # Compute residuals
-    residuals = transformed_points - local_points
-    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
-    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
+        # Transform measured points
+        transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
-    # Identify valid reference marks (Residuals ≤ 0.03)
-    valid_indices = (horizontal_residuals <= 0.03) & (vertical_residuals <= 0.03)
+        # Compute residuals
+        residuals = transformed_points - local_points
+        horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
+        vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
 
-    if np.sum(valid_indices) < 3:
-        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
-        return None, None, None, None, None, None
+        # Identify valid reference marks (Residuals ≤ 0.030)
+        valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
-    # Use only valid reference marks for recalculation
-    measured_points = measured_points[valid_indices]
-    local_points = local_points[valid_indices]
+        if np.sum(valid_indices) < 3:
+            st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
+            return None, None, None, None, None, None, None
 
-    # Recompute transformation with only valid marks
-    return pitch, roll, heading, residuals, R_matrix, translation
+        # If all residuals are below the threshold, break loop
+        if np.all(valid_indices):
+            break
+
+        # Remove the worst reference mark (largest residual)
+        worst_index = np.argmax(horizontal_residuals + vertical_residuals)
+        excluded_marks.append(rtk_df.iloc[worst_index]["Reference Mark"])
+
+        # Remove the worst reference mark and repeat calculation
+        rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
+        local_df = local_df.drop(index=worst_index).reset_index(drop=True)
+
+    return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks
 
 # Compute Calibration on Button Click
 if st.button("Compute Calibration"):
-    pitch, roll, heading, residuals, R_matrix, translation = compute_calibration(rtk_df, local_df)
+    pitch, roll, heading, residuals, R_matrix, translation, excluded_marks = compute_calibration(rtk_df, local_df)
     
     if residuals is not None:
         st.success(f"Pitch: {pitch:.4f}°")
@@ -116,6 +126,7 @@ if st.button("Compute Calibration"):
         st.subheader("Translation Vector")
         st.write(translation)
 
-        # Prepare residuals for download
-        residuals_csv = residuals_df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="Download Residuals as CSV", data=residuals_csv, file_name="residuals.csv", mime="text/csv")
+        # Notify about excluded reference marks
+        if excluded_marks:
+            st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
+
