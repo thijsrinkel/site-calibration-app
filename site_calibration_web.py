@@ -113,9 +113,16 @@ if st.button("Compute Calibration"):
 
     valid_marks = rtk_df["Reference Mark"].tolist()  # Get valid reference marks after filtering
 
-    # 🔍 Debugging Step: Show raw residuals
-    st.write("### Debugging: Raw Residuals")
-    st.write(residuals)  # Display raw residuals in Streamlit
+    # 🔍 Debugging: Display raw residuals with column names
+    residuals_df_raw = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
+    residuals_df_raw.insert(0, "Reference Mark", valid_marks)  # Add reference mark column
+
+    st.write("### Debugging: Raw Residuals (X, Y, Z)")
+    st.dataframe(residuals_df_raw)  # Display formatted residuals table
+
+    # ✅ Compute horizontal residual instead of showing separate X and Y
+    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
+    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
 
     # 🔍 Check if lengths match
     if len(valid_marks) != len(residuals):
@@ -123,8 +130,8 @@ if st.button("Compute Calibration"):
     else:
         residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
-            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
-            "Vertical Residual": np.abs(residuals[:, 2]).round(3)
+            "Horizontal Residual": horizontal_residuals.round(3),
+            "Vertical Residual": vertical_residuals.round(3)
         })
 
         st.subheader("Residuals per Reference Mark")
