@@ -6,8 +6,8 @@ from scipy.spatial.transform import Rotation as R
 st.title("Site Calibration Tool (WebGUI)")
 
 # Upload RTK and Local Coordinate CSV files
-rtk_file = st.file_uploader("Upload RTK Measurement File (CSV)", type=["csv"])
-local_file = st.file_uploader("Upload Local Coordinates File (CSV)", type=["csv"])
+rtk_file = st.file_uploader("Upload Easting,Northing,Height Measurement File (CSV)", type=["csv"])
+local_file = st.file_uploader("Upload Caisson X,Y,Z File (QINSY Conventions) (CSV)", type=["csv"])
 
 def compute_calibration(rtk_df, local_df):
     " Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method."
@@ -71,7 +71,7 @@ if rtk_file and local_file:
         if residuals is not None:
             st.success(f"Pitch: {pitch:.4f}°")
             st.success(f"Roll: {roll:.4f}°")
-            st.success(f"Heading: {heading:.4f}°")
+            st.success(f"Heading[GRID]: {heading:.4f}°")
 
             # Display Residuals Table
             residuals_df = pd.DataFrame(residuals, columns=["X Residual", "Y Residual", "Z Residual"])
