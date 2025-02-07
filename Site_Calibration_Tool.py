@@ -29,6 +29,9 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     1️⃣ **Enter Your Data:**
     - Input the Topo measurements (Easting, Northing, Height) in the first table.
     - Enter the Local Caisson Coordinates (X, Y, Z) in the second table.
+    - X = Starboard positive
+    - Y = Bow positive
+    - Z = Up positive
     
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate the **pitch, roll, heading, and residuals**.
@@ -73,10 +76,10 @@ with st.sidebar:
         "Z": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
     })
 
-    st.subheader("📍 Enter RTK Measurements")
+    st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data")
 
-    st.subheader("📍 Enter Local Site Coordinates")
+    st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(default_local_data, hide_index=True, num_rows="dynamic", key="local_data")
 
 # Function to Compute Calibration
