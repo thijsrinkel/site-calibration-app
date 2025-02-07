@@ -42,8 +42,9 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     - Click the **"⬇️ Download Residuals as CSV"** button to save the results.
     
     🌍 **Conventions**
-    - **Roll** = **Positive** → **Starboard up**
+    - **Roll** = **Positive** → **Starboard up**.
     - **Pitch** = **Positive** → **Bow Up**.
+    - **Heading = Grid north**
     - **X** = **Positive** → **Starboard**.
     - **Y** = **Positive** → **Bow**.
     - **Z** = **Positive** → **Up**.
@@ -153,9 +154,9 @@ if st.button("📊 Compute Calibration"):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.success(f"📐 Pitch: {pitch:.4f}°")
-            st.success(f"📏 Roll: {roll:.4f}°")
-            st.success(f"🧭 Heading: {heading:.4f}°")
+            st.success(f"🚀 Pitch: {pitch:.4f}°")
+            st.success(f"🌀 Roll: {roll:.4f}°")
+            st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
 
         with col2:
             if excluded_marks:
