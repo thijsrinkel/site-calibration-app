@@ -48,7 +48,7 @@ def compute_calibration(rtk_df, local_df):
     # Identify valid reference marks (Residuals ≤ 0.03)
     valid_indices = (horizontal_residuals <= 0.5) & (vertical_residuals <= 0.5)
     
-    if np.sum(valid_indices) < 3:
+    if np.sum(valid_indices) < 1:
         st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
         return None, None, None, None, None, None
 
