@@ -94,12 +94,3 @@ if rtk_file and local_file:
             # Prepare residuals for download
             residuals_csv = residuals_df.to_csv(index=False).encode('utf-8')
             st.download_button(label="Download Residuals as CSV", data=residuals_csv, file_name="residuals.csv", mime="text/csv")
-"""
-
-# Save the corrected script
-script_path_corrected = "/mnt/data/site_calibration_web_corrected.py"
-with open(script_path_corrected, "w") as script_file:
-    script_file.write(corrected_script_content)
-
-# Provide the download link
-script_path_corrected
