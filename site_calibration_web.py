@@ -109,9 +109,10 @@ if st.button("Compute Calibration"):
         st.success(f"Roll: {roll:.4f}°")
         st.success(f"Heading: {heading:.4f}°")
 
-        # Display Residuals Table
+        # Ensure reference mark indexing matches residuals
+        valid_marks = rtk_df["Reference Mark"].tolist()
         residuals_df = pd.DataFrame({
-            "Reference Mark": rtk_df["Reference Mark"],
+            "Reference Mark": valid_marks,
             "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
             "Vertical Residual": np.abs(residuals[:, 2]).round(3)
         })
@@ -119,14 +120,6 @@ if st.button("Compute Calibration"):
         st.subheader("Residuals per Reference Mark")
         st.dataframe(residuals_df)
 
-        # Display Transformation Matrix & Translation Vector
-        st.subheader("Transformation Matrix (Rotation)")
-        st.write(R_matrix)
-
-        st.subheader("Translation Vector")
-        st.write(translation)
-
         # Notify about excluded reference marks
         if excluded_marks:
             st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
-
