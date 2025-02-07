@@ -29,7 +29,7 @@ local_df = st.data_editor(default_local_data, hide_index=True, num_rows="fixed",
 def compute_calibration(rtk_df, local_df):
     """ Iteratively removes reference marks with residuals > 0.030 until a valid solution is found. """
     excluded_marks = []
-    original_marks = rtk_df["Reference Mark"].tolist()  # Save original reference mark order
+    valid_marks = rtk_df["Reference Mark"].tolist()  # Track valid reference marks
 
     while True:
         # Convert DataFrame values to float
@@ -92,15 +92,20 @@ def compute_calibration(rtk_df, local_df):
 
         # Remove the worst reference mark (largest residual)
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-        excluded_marks.append(rtk_df.iloc[worst_index]["Reference Mark"])
+        excluded_marks.append(valid_marks[worst_index])  # Track removed mark
 
-        # Drop the worst reference mark and update residuals
+        # Remove from valid reference marks list
+        valid_marks.pop(worst_index)
+
+        # Drop the worst reference mark from dataframes
         rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
         local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
-    # Get final valid reference marks
-    final_valid_marks = rtk_df["Reference Mark"].tolist()
-    return pitch, roll, heading, residuals[:len(final_valid_marks)], R_matrix, translation, excluded_marks
+        # Recalculate residuals only for the remaining marks
+        residuals = residuals[valid_indices]
+
+    return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
+
 
 # Compute Calibration on Button Click
 if st.button("Compute Calibration"):
