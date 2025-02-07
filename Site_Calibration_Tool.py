@@ -41,17 +41,12 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     4️⃣ **Download the Results (Optional):**
     - Click the **"⬇️ Download Residuals as CSV"** button to save the results.
     
-    📌 **Conventions**
-    - **Roll**
-      - **Positive** → **Starboard up**
-    - **Pitch**
-      - **Positive** → **Bow Up**.
-    - **X**
-      - **Positive** → **Starboard**.
-    - **Y**
-      - **Positive** → **Bow**.
-    - **Z**
-      - **Positive** → **Up**.
+    🌍 **Conventions**
+    - **Roll** = **Positive** → **Starboard up**
+    - **Pitch** = **Positive** → **Bow Up**.
+    - **X** = **Positive** → **Starboard**.
+    - **Y** = **Positive** → **Bow**.
+    - **Z** = **Positive** → **Up**.
     
     ---
     **Tips:**
