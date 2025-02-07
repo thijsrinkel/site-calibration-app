@@ -8,16 +8,16 @@ st.title("Site Calibration Tool (WebGUI)")
 # Initialize default RTK and Local Site Data (for 6 reference marks)
 default_rtk_data = {
     "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
-    "Easting": [0, 0, 0, 0, 0, 0],
-    "Northing": [0, 0, 0, 0, 0, 0],
-    "Height": [0, 0, 0, 0, 0, 0]
+    "Easting": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
+    "Northing": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
+    "Height": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
 }
 
 default_local_data = {
     "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
-    "X": [0, 0, 0, 0, 0, 0],
-    "Y": [0, 0, 0, 0, 0, 0],
-    "Z": [0, 0, 0, 0, 0, 0]
+    "X": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
+    "Y": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
+    "Z": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
 }
 
 st.subheader("Enter RTK Measurements")
