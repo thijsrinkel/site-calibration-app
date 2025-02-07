@@ -19,10 +19,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📍 Site Calibration Tool (WebGUI)")
+st.title("📍 Site Calibration Tool")
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
+    st.image("TR-offshore-survey-logo-1-200x75.png", width=150)
     st.header("🔧 Input Calibration Data")
     
     # Default RTK Data
