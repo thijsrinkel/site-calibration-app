@@ -116,17 +116,13 @@ if st.button("Compute Calibration"):
         st.success(f"Roll: {roll:.4f}°")
         st.success(f"Heading: {heading:.4f}°")
 
-    valid_marks = rtk_df["Reference Mark"].tolist()  # Get valid reference marks after filtering
-
-    # 🔍 Debugging Step: Check lengths before inserting
+    # `valid_marks` now comes from `compute_calibration()` and is correctly filtered
     if len(valid_marks) != len(residuals):
         st.error(f"Mismatch detected: {len(valid_marks)} reference marks vs {len(residuals)} residuals.")
     else:
         # ✅ Create DataFrame with named columns
         residuals_df_raw = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
-
-        # ✅ Ensure valid_marks matches the DataFrame length
-        residuals_df_raw.insert(0, "Reference Mark", valid_marks)
+        residuals_df_raw.insert(0, "Reference Mark", valid_marks)  # Add reference mark column
 
         st.write("### Debugging: Raw Residuals (X, Y, Z)")
         st.dataframe(residuals_df_raw)  # Display formatted residuals table
@@ -149,6 +145,7 @@ if st.button("Compute Calibration"):
         st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
 else:
     st.error("Calibration failed. Not enough valid reference marks or a mismatch in calculations.")
+
 
 
 
