@@ -39,6 +39,23 @@ def compute_calibration(rtk_df, local_df):
     # Extract Local Site coordinates (X, Y, Z)
     local_points = local_df[["X", "Y", "Z"]].values
 
+    # Compute residuals first to filter out bad reference marks
+    transformed_points = measured_points.copy()
+    residuals = transformed_points - local_points
+    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
+    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
+
+    # Identify valid reference marks (Residuals ≤ 0.03)
+    valid_indices = (horizontal_residuals <= 0.03) & (vertical_residuals <= 0.03)
+    
+    if np.sum(valid_indices) < 3:
+        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
+        return None, None, None, None, None, None
+
+    # Use only valid reference marks for calibration
+    measured_points = measured_points[valid_indices]
+    local_points = local_points[valid_indices]
+
     # Compute centroids
     centroid_measured = np.mean(measured_points, axis=0)
     centroid_local = np.mean(local_points, axis=0)
@@ -71,25 +88,10 @@ def compute_calibration(rtk_df, local_df):
     # Transform measured points
     transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
-    # Compute residuals
+    # Compute final residuals after transformation
     residuals = transformed_points - local_points
-    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
-    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
 
-    # Identify valid reference marks (Residuals ≤ 0.03)
-    valid_indices = (horizontal_residuals <= 0.03) & (vertical_residuals <= 0.03)
-    
-    if np.sum(valid_indices) < 3:
-        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
-        return None, None, None, None, None, None
-
-    # Recalculate using only valid reference marks
-    measured_points_valid = measured_points[valid_indices]
-    local_points_valid = local_points[valid_indices]
-
-    # Recompute transformation
-    return compute_calibration(pd.DataFrame(measured_points_valid, columns=["Easting", "Northing", "Height"]), 
-                               pd.DataFrame(local_points_valid, columns=["X", "Y", "Z"]))
+    return pitch, roll, heading, residuals, R_matrix, translation
 
 # Compute Calibration on Button Click
 if st.button("Compute Calibration"):
