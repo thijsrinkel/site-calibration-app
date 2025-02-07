@@ -111,8 +111,8 @@ if st.button("Compute Calibration"):
 
         # Ensure reference mark indexing matches residuals
         if len(residuals) == len(rtk_df):
-        valid_marks = rtk_df["Reference Mark"].tolist()
-        residuals_df = pd.DataFrame({
+            valid_marks = rtk_df["Reference Mark"].tolist()
+            residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
             "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
             "Vertical Residual": np.abs(residuals[:, 2]).round(3)
