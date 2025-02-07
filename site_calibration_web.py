@@ -57,8 +57,7 @@ transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
     # Compute residuals
 residuals = transformed_points - local_points
-
-   return pitch, roll, heading, residuals, R_matrix, translation
+return pitch, roll, heading, residuals, R_matrix, translation
 
 # Process files when both are uploaded
 if rtk_file and local_file:
