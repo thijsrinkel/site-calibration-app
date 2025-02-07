@@ -104,26 +104,27 @@ def compute_calibration(rtk_df, local_df):
 if st.button("Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks = compute_calibration(rtk_df, local_df)
     
-    if residuals is not None and len(residuals) == len(rtk_df):
-        st.success(f"Pitch: {pitch:.4f}°")
-        st.success(f"Roll: {roll:.4f}°")
-        st.success(f"Heading: {heading:.4f}°")
+    if residuals is not None:
+    st.success(f"Pitch: {pitch:.4f}°")
+    st.success(f"Roll: {roll:.4f}°")
+    st.success(f"Heading: {heading:.4f}°")
 
     valid_marks = rtk_df["Reference Mark"].tolist()
 
-    residuals_df = pd.DataFrame({
-        "Reference Mark": valid_marks,
-        "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
-        "Vertical Residual": np.abs(residuals[:, 2]).round(3)
-    })
+    # 🔍 Debugging: Check lengths before creating DataFrame
+    if len(valid_marks) != len(residuals):
+        st.error(f"Mismatch detected: {len(valid_marks)} reference marks vs {len(residuals)} residuals.")
+    else:
+        residuals_df = pd.DataFrame({
+            "Reference Mark": valid_marks,
+            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
+            "Vertical Residual": np.abs(residuals[:, 2]).round(3)
+        })
 
-    st.subheader("Residuals per Reference Mark")
-    st.dataframe(residuals_df)
+        st.subheader("Residuals per Reference Mark")
+        st.dataframe(residuals_df)
 
     if excluded_marks:
         st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
 else:
     st.error("Calibration failed. Not enough valid reference marks or a mismatch in calculations.")
-
-
-       
