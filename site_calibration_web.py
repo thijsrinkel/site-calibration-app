@@ -66,6 +66,6 @@ if rtk_file and local_file:
             st.success(f"Heading: {heading:.4f}°")
 
             # Prepare results for download
-            results_df = pd.DataFrame({"Pitch (°)": [pitch], "Roll (°)": [roll], "Heading (°)": [heading]})
+            results_df = pd.DataFrame({"Pitch (°)": [pitch], "Roll (°)": [roll], "Heading (°)[GRID]": [heading]})
             csv_data = results_df.to_csv(index=False).encode('utf-8')
             st.download_button(label="Download Results as CSV", data=csv_data, file_name="calibration_results.csv", mime="text/csv")
