@@ -113,7 +113,11 @@ if st.button("Compute Calibration"):
 
     valid_marks = rtk_df["Reference Mark"].tolist()  # Get valid reference marks after filtering
 
-    # Debug: Check if lengths match
+    # 🔍 Debugging Step: Show raw residuals
+    st.write("### Debugging: Raw Residuals")
+    st.write(residuals)  # Display raw residuals in Streamlit
+
+    # 🔍 Check if lengths match
     if len(valid_marks) != len(residuals):
         st.error(f"Mismatch detected: {len(valid_marks)} reference marks vs {len(residuals)} residuals.")
     else:
@@ -131,3 +135,4 @@ if st.button("Compute Calibration"):
         st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
 else:
     st.error("Calibration failed. Not enough valid reference marks or a mismatch in calculations.")
+
