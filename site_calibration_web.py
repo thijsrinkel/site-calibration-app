@@ -28,14 +28,14 @@ local_df = st.data_editor(default_local_data, hide_index=True, num_rows="fixed",
 
 def compute_calibration(rtk_df, local_df):
     """ Iteratively removes reference marks with residuals > 0.030 until a valid solution is found. """
-
     excluded_marks = []
+    original_marks = rtk_df["Reference Mark"].tolist()  # Save original reference mark order
 
     while True:
         # Convert DataFrame values to float
         rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
         local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
-        
+
         # Extract RTK coordinates (Easting, Northing, Height)
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
 
@@ -94,11 +94,13 @@ def compute_calibration(rtk_df, local_df):
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
         excluded_marks.append(rtk_df.iloc[worst_index]["Reference Mark"])
 
-        # Remove the worst reference mark and repeat calculation
+        # Drop the worst reference mark and update residuals
         rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
         local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
-    return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks
+    # Get final valid reference marks
+    final_valid_marks = rtk_df["Reference Mark"].tolist()
+    return pitch, roll, heading, residuals[:len(final_valid_marks)], R_matrix, translation, excluded_marks
 
 # Compute Calibration on Button Click
 if st.button("Compute Calibration"):
@@ -109,9 +111,9 @@ if st.button("Compute Calibration"):
         st.success(f"Roll: {roll:.4f}°")
         st.success(f"Heading: {heading:.4f}°")
 
-    valid_marks = rtk_df["Reference Mark"].tolist()
+    valid_marks = rtk_df["Reference Mark"].tolist()  # Get valid reference marks after filtering
 
-    # 🔍 Debugging: Check lengths before creating DataFrame
+    # Debug: Check if lengths match
     if len(valid_marks) != len(residuals):
         st.error(f"Mismatch detected: {len(valid_marks)} reference marks vs {len(residuals)} residuals.")
     else:
@@ -124,6 +126,7 @@ if st.button("Compute Calibration"):
         st.subheader("Residuals per Reference Mark")
         st.dataframe(residuals_df)
 
+    # Display excluded reference marks
     if excluded_marks:
         st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
 else:
