@@ -5,29 +5,33 @@ from scipy.spatial.transform import Rotation as R
 
 st.title("Site Calibration Tool (WebGUI)")
 
-# Initialize default RTK and Local Site Data (for 6 reference marks)
-default_rtk_data = {
+# Initialize default RTK and Local Site Data with float-compatible values
+default_rtk_data = pd.DataFrame({
     "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
     "Easting": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
     "Northing": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
     "Height": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
-}
+})
 
-default_local_data = {
+default_local_data = pd.DataFrame({
     "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
     "X": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
     "Y": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
     "Z": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
-}
+})
 
 st.subheader("Enter RTK Measurements")
-rtk_df = st.data_editor(pd.DataFrame(default_rtk_data))
+rtk_df = st.data_editor(default_rtk_data, hide_index=True, num_rows="fixed", key="rtk_data")
 
 st.subheader("Enter Local Site Coordinates")
-local_df = st.data_editor(pd.DataFrame(default_local_data))
+local_df = st.data_editor(default_local_data, hide_index=True, num_rows="fixed", key="local_data")
 
 def compute_calibration(rtk_df, local_df):
     """ Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method. """
+
+    # Convert DataFrame values to float
+    rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
+    local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
     
     # Extract RTK coordinates (Easting, Northing, Height)
     measured_points = rtk_df[["Easting", "Northing", "Height"]].values
@@ -99,8 +103,8 @@ if st.button("Compute Calibration"):
         # Display Residuals Table
         residuals_df = pd.DataFrame({
             "Reference Mark": rtk_df["Reference Mark"],
-            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2),
-            "Vertical Residual": np.abs(residuals[:, 2])
+            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
+            "Vertical Residual": np.abs(residuals[:, 2]).round(3)
         })
 
         st.subheader("Residuals per Reference Mark")
