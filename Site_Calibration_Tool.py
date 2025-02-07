@@ -19,11 +19,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+st.image("TM_Edison_logo.jpg", width=150)
 st.title("📍 Site Calibration Tool")
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
-    st.image("TM_Edison_logo.jpg", width=200)
+    st.image("TM_Edison_logo.jpg", width=150)
     st.header("🔧 Input Calibration Data")
     
     # Default RTK Data
