@@ -1,6 +1,3 @@
-# Correct the indentation issue and re-save the updated script
-
-corrected_script_content = """\
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,7 +10,7 @@ rtk_file = st.file_uploader("Upload RTK Measurement File (CSV)", type=["csv"])
 local_file = st.file_uploader("Upload Local Coordinates File (CSV)", type=["csv"])
 
 def compute_calibration(rtk_df, local_df):
-    \"\"\" Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method. \"\"\"
+    " Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method."
     
     # Ensure valid data
     if rtk_df.shape[0] != 6 or local_df.shape[0] != 6:
