@@ -109,7 +109,8 @@ def compute_calibration(rtk_df, local_df):
 
 # Compute Calibration on Button Click
 if st.button("Compute Calibration"):
-    pitch, roll, heading, residuals, R_matrix, translation, excluded_marks = compute_calibration(rtk_df, local_df)
+    pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
+
     
     if residuals is not None:
         st.success(f"Pitch: {pitch:.4f}°")
