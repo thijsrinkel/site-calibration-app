@@ -39,23 +39,6 @@ def compute_calibration(rtk_df, local_df):
     # Extract Local Site coordinates (X, Y, Z)
     local_points = local_df[["X", "Y", "Z"]].values
 
-    # Compute residuals first to filter out bad reference marks
-    transformed_points = measured_points.copy()
-    residuals = transformed_points - local_points
-    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
-    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
-
-    # Identify valid reference marks (Residuals ≤ 0.03)
-    valid_indices = (horizontal_residuals <= 10.5) & (vertical_residuals <= 10.5)
-    
-    if np.sum(valid_indices) < 1:
-        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
-        return None, None, None, None, None, None
-
-    # Use only valid reference marks for calibration
-    measured_points = measured_points[valid_indices]
-    local_points = local_points[valid_indices]
-
     # Compute centroids
     centroid_measured = np.mean(measured_points, axis=0)
     centroid_local = np.mean(local_points, axis=0)
@@ -88,9 +71,23 @@ def compute_calibration(rtk_df, local_df):
     # Transform measured points
     transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
-    # Compute final residuals after transformation
+    # Compute residuals
     residuals = transformed_points - local_points
+    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
+    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
 
+    # Identify valid reference marks (Residuals ≤ 0.03)
+    valid_indices = (horizontal_residuals <= 0.03) & (vertical_residuals <= 0.03)
+
+    if np.sum(valid_indices) < 3:
+        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
+        return None, None, None, None, None, None
+
+    # Use only valid reference marks for recalculation
+    measured_points = measured_points[valid_indices]
+    local_points = local_points[valid_indices]
+
+    # Recompute transformation with only valid marks
     return pitch, roll, heading, residuals, R_matrix, translation
 
 # Compute Calibration on Button Click
