@@ -6,8 +6,8 @@ from scipy.spatial.transform import Rotation as R
 st.title("Site Calibration Tool (WebGUI)")
 
 # Upload RTK and Local Coordinate CSV files
-rtk_file = st.file_uploader("Upload RTK Measurement File (CSV)", type=["csv"])
-local_file = st.file_uploader("Upload Local Coordinates File (CSV)", type=["csv"])
+rtk_file = st.file_uploader("Upload Easting,Northing,Height Measurement File (CSV)", type=["csv"])
+local_file = st.file_uploader("Upload X,Y,Z Coordinates File (CSV)", type=["csv"])
 
 def compute_calibration(rtk_df, local_df):
     """ Computes Pitch, Roll, and Heading using the Trimble Site Calibration Method. """
