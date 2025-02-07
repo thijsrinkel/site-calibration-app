@@ -29,10 +29,7 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     1️⃣ **Enter Your Data:**
     - Input the Topo measurements (Easting, Northing, Height) in the first table.
     - Enter the Local Caisson Coordinates (X, Y, Z) in the second table.
-    - X = Starboard positive
-    - Y = Bow positive
-    - Z = Up positive
-    
+        
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate the **pitch, roll, heading, and residuals**.
     - If any **reference marks exceed the threshold**, they will be **excluded automatically**.
@@ -43,7 +40,19 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
 
     4️⃣ **Download the Results (Optional):**
     - Click the **"⬇️ Download Residuals as CSV"** button to save the results.
-
+    
+    📌 **Conventions**
+    - **Roll**
+      - **Positive** → **Starboard up**
+    - **Pitch**
+      - **Positive** → **Bow Up**.
+    - **X**
+      - **Positive** → **Starboard**.
+    - **Y**
+      - **Positive** → **Bow**.
+    - **Z**
+      - **Positive** → **Up**.
+    
     ---
     **Tips:**
     - Ensure that at least **3 valid reference marks** remain after filtering.
