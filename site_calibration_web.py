@@ -5,23 +5,30 @@ from scipy.spatial.transform import Rotation as R
 
 st.title("Site Calibration Tool (WebGUI)")
 
-# Upload RTK and Local Coordinate CSV files
-rtk_file = st.file_uploader("Upload Topo Easting, Northing, Height Measurement File (CSV)", type=["csv"])
-local_file = st.file_uploader("Upload Caisson X,Y,Z (Qinsy Frame) File (CSV)", type=["csv"])
+# Initialize default RTK and Local Site Data (for 6 reference marks)
+default_rtk_data = {
+    "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
+    "Easting": [0, 0, 0, 0, 0, 0],
+    "Northing": [0, 0, 0, 0, 0, 0],
+    "Height": [0, 0, 0, 0, 0, 0]
+}
+
+default_local_data = {
+    "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
+    "X": [0, 0, 0, 0, 0, 0],
+    "Y": [0, 0, 0, 0, 0, 0],
+    "Z": [0, 0, 0, 0, 0, 0]
+}
+
+st.subheader("Enter RTK Measurements")
+rtk_df = st.data_editor(pd.DataFrame(default_rtk_data))
+
+st.subheader("Enter Local Site Coordinates")
+local_df = st.data_editor(pd.DataFrame(default_local_data))
 
 def compute_calibration(rtk_df, local_df):
-    " Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method."
+    """ Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method. """
     
-    # Ensure valid data
-    if rtk_df.shape[0] != 6 or local_df.shape[0] != 6:
-        st.error("Each file must contain exactly 6 reference marks.")
-        return None, None, None, None, None, None
-
-    # Check if "Reference Mark" column exists in RTK file
-    if "Reference Mark" not in rtk_df.columns:
-        st.error('Error: "Reference Mark" column is missing in the RTK file. Please check your CSV file and ensure the correct headers.')
-        return None, None, None, None, None, None
-
     # Extract RTK coordinates (Easting, Northing, Height)
     measured_points = rtk_df[["Easting", "Northing", "Height"]].values
 
@@ -62,47 +69,50 @@ def compute_calibration(rtk_df, local_df):
 
     # Compute residuals
     residuals = transformed_points - local_points
+    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
+    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
 
-    return pitch, roll, heading, residuals, R_matrix, translation
+    # Identify valid reference marks (Residuals ≤ 0.03)
+    valid_indices = (horizontal_residuals <= 0.03) & (vertical_residuals <= 0.03)
+    
+    if np.sum(valid_indices) < 3:
+        st.error("Too few valid reference marks remain after filtering! At least 3 are required.")
+        return None, None, None, None, None, None
 
-# Process files when both are uploaded
-if rtk_file and local_file:
-    rtk_df = pd.read_csv(rtk_file)
-    local_df = pd.read_csv(local_file)
+    # Recalculate using only valid reference marks
+    measured_points_valid = measured_points[valid_indices]
+    local_points_valid = local_points[valid_indices]
 
-    if st.button("Compute Calibration"):
-        pitch, roll, heading, residuals, R_matrix, translation = compute_calibration(rtk_df, local_df)
-        
-        if residuals is not None:
-            st.success(f"Pitch: {pitch:.4f}°")
-            st.success(f"Roll: {roll:.4f}°")
-            st.success(f"Heading: {heading:.4f}°")
+    # Recompute transformation
+    return compute_calibration(pd.DataFrame(measured_points_valid, columns=["Easting", "Northing", "Height"]), 
+                               pd.DataFrame(local_points_valid, columns=["X", "Y", "Z"]))
 
-            # Display Residuals Table
-            residuals_df = pd.DataFrame(residuals, columns=["X Residual", "Y Residual", "Z Residual"])
-            
-            # Only insert "Reference Mark" column if it exists
-            if "Reference Mark" in rtk_df.columns:
-                residuals_df.insert(0, "Reference Mark", rtk_df["Reference Mark"])
-            else:
-                st.warning('Warning: "Reference Mark" column is missing. Residuals will be displayed without reference names.')
+# Compute Calibration on Button Click
+if st.button("Compute Calibration"):
+    pitch, roll, heading, residuals, R_matrix, translation = compute_calibration(rtk_df, local_df)
+    
+    if residuals is not None:
+        st.success(f"Pitch: {pitch:.4f}°")
+        st.success(f"Roll: {roll:.4f}°")
+        st.success(f"Heading: {heading:.4f}°")
 
-            st.subheader("Residuals per Reference Mark")
-            st.dataframe(residuals_df)
+        # Display Residuals Table
+        residuals_df = pd.DataFrame({
+            "Reference Mark": rtk_df["Reference Mark"],
+            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2),
+            "Vertical Residual": np.abs(residuals[:, 2])
+        })
 
-            # Display Transformation Matrix & Translation Vector
-            st.subheader("Transformation Matrix (Rotation)")
-            st.write(R_matrix)
+        st.subheader("Residuals per Reference Mark")
+        st.dataframe(residuals_df)
 
-            st.subheader("Translation Vector")
-            st.write(translation)
+        # Display Transformation Matrix & Translation Vector
+        st.subheader("Transformation Matrix (Rotation)")
+        st.write(R_matrix)
 
-            # Prepare results for download
-            results_df = pd.DataFrame({"Pitch (°)": [pitch], "Roll (°)": [roll], "Heading (°)": [heading]})
-            csv_data = results_df.to_csv(index=False).encode('utf-8')
-            st.download_button(label="Download Results as CSV", data=csv_data, file_name="calibration_results.csv", mime="text/csv")
+        st.subheader("Translation Vector")
+        st.write(translation)
 
-            # Prepare residuals for download
-            residuals_csv = residuals_df.to_csv(index=False).encode('utf-8')
-            st.download_button(label="Download Residuals as CSV", data=residuals_csv, file_name="residuals.csv", mime="text/csv")
-
+        # Prepare residuals for download
+        residuals_csv = residuals_df.to_csv(index=False).encode('utf-8')
+        st.download_button(label="Download Residuals as CSV", data=residuals_csv, file_name="residuals.csv", mime="text/csv")
