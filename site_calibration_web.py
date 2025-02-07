@@ -63,7 +63,7 @@ if rtk_file and local_file:
             pitch, roll, heading = results
             st.success(f"Pitch: {pitch:.4f}°")
             st.success(f"Roll: {roll:.4f}°")
-            st.success(f"Heading: {heading:.4f}°")
+            st.success(f"Heading [GRID]: {heading:.4f}°")
 
             # Prepare results for download
             results_df = pd.DataFrame({"Pitch (°)": [pitch], "Roll (°)": [roll], "Heading (°)[GRID]": [heading]})
