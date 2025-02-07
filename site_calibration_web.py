@@ -13,7 +13,7 @@ def compute_calibration(rtk_df, local_df):
    " Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method. "
     
     # Ensure valid data
-    if rtk_df.shape[0] != 6 or local_df.shape[0] != 6:
+   if rtk_df.shape[0] != 6 or local_df.shape[0] != 6:
         st.error("Each file must contain exactly 6 reference marks.")
         return None, None, None, None, None
 
