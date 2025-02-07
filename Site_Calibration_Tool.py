@@ -21,6 +21,36 @@ st.markdown("""
 
 st.image("TM_Edison_logo.jpg", width=150)
 st.title("📍 Site Calibration Tool")
+# 📖 User Guide - Expandable Section
+with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
+    st.markdown("""
+    Welcome to the **Site Calibration Tool**! Follow these steps to use the tool correctly:
+
+    1️⃣ **Enter Your Data:**
+    - Input the RTK measurements (Easting, Northing, Height) in the first table.
+    - Enter the Local Site Coordinates (X, Y, Z) in the second table.
+    
+    2️⃣ **Click 'Compute Calibration':**
+    - The tool will calculate the **pitch, roll, heading, and residuals**.
+    - If any **reference marks exceed the threshold**, they will be **excluded automatically**.
+
+    3️⃣ **Review the Results:**
+    - The **residuals per reference mark** will be displayed in a table.
+    - Excluded reference marks will be shown in a warning message.
+
+    4️⃣ **Download the Results (Optional):**
+    - Click the **"⬇️ Download Residuals as CSV"** button to save the results.
+
+    ---
+    **Tips:**
+    - Ensure that at least **3 valid reference marks** remain after filtering.
+    - If too many reference marks are removed, try adjusting your input data.
+    - Hover over a cell to edit data directly.
+
+    ⚡ **Need help?** Contact support or check the documentation.
+    """)
+
+
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
