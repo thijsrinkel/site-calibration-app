@@ -6,8 +6,8 @@ from scipy.spatial.transform import Rotation as R
 st.title("Site Calibration Tool (WebGUI)")
 
 # Upload RTK and Local Coordinate CSV files
-rtk_file = st.file_uploader("Upload Easting,Northing,Height Measurement File (CSV)", type=["csv"])
-local_file = st.file_uploader("Upload Caisson X,Y,Z File (QINSY Conventions) (CSV)", type=["csv"])
+rtk_file = st.file_uploader("Upload RTK Measurement File (CSV)", type=["csv"])
+local_file = st.file_uploader("Upload Local Coordinates File (CSV)", type=["csv"])
 
 def compute_calibration(rtk_df, local_df):
     " Computes Pitch, Roll, Heading, and Residuals using the Trimble Site Calibration Method."
@@ -15,6 +15,11 @@ def compute_calibration(rtk_df, local_df):
     # Ensure valid data
     if rtk_df.shape[0] != 6 or local_df.shape[0] != 6:
         st.error("Each file must contain exactly 6 reference marks.")
+        return None, None, None, None, None, None
+
+    # Check if "Reference Mark" column exists in RTK file
+    if "Reference Mark" not in rtk_df.columns:
+        st.error('Error: "Reference Mark" column is missing in the RTK file. Please check your CSV file and ensure the correct headers.')
         return None, None, None, None, None, None
 
     # Extract RTK coordinates (Easting, Northing, Height)
@@ -71,11 +76,17 @@ if rtk_file and local_file:
         if residuals is not None:
             st.success(f"Pitch: {pitch:.4f}°")
             st.success(f"Roll: {roll:.4f}°")
-            st.success(f"Heading[GRID]: {heading:.4f}°")
+            st.success(f"Heading: {heading:.4f}°")
 
             # Display Residuals Table
             residuals_df = pd.DataFrame(residuals, columns=["X Residual", "Y Residual", "Z Residual"])
-            residuals_df.insert(0, "Reference Mark", rtk_df["Reference Mark"])
+            
+            # Only insert "Reference Mark" column if it exists
+            if "Reference Mark" in rtk_df.columns:
+                residuals_df.insert(0, "Reference Mark", rtk_df["Reference Mark"])
+            else:
+                st.warning('Warning: "Reference Mark" column is missing. Residuals will be displayed without reference names.')
+
             st.subheader("Residuals per Reference Mark")
             st.dataframe(residuals_df)
 
@@ -94,3 +105,4 @@ if rtk_file and local_file:
             # Prepare residuals for download
             residuals_csv = residuals_df.to_csv(index=False).encode('utf-8')
             st.download_button(label="Download Residuals as CSV", data=residuals_csv, file_name="residuals.csv", mime="text/csv")
+
