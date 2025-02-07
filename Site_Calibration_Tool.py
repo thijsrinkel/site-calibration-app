@@ -27,8 +27,8 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     Welcome to the **Site Calibration Tool**! Follow these steps to use the tool correctly:
 
     1️⃣ **Enter Your Data:**
-    - Input the RTK measurements (Easting, Northing, Height) in the first table.
-    - Enter the Local Site Coordinates (X, Y, Z) in the second table.
+    - Input the Topo measurements (Easting, Northing, Height) in the first table.
+    - Enter the Local Caisson Coordinates (X, Y, Z) in the second table.
     
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate the **pitch, roll, heading, and residuals**.
@@ -45,9 +45,9 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     **Tips:**
     - Ensure that at least **3 valid reference marks** remain after filtering.
     - If too many reference marks are removed, try adjusting your input data.
-    - Hover over a cell to edit data directly.
+    - Ensure that your values have at least 2 decimals, preferably 3.
 
-    ⚡ **Need help?** Contact support or check the documentation.
+    ⚡ **Need help?** Contact thijs.rinkel@jandenul.com.
     """)
 
 
