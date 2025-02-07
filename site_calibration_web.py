@@ -105,9 +105,9 @@ if st.button("Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks = compute_calibration(rtk_df, local_df)
     
     if residuals is not None:
-    st.success(f"Pitch: {pitch:.4f}°")
-    st.success(f"Roll: {roll:.4f}°")
-    st.success(f"Heading: {heading:.4f}°")
+        st.success(f"Pitch: {pitch:.4f}°")
+        st.success(f"Roll: {roll:.4f}°")
+        st.success(f"Heading: {heading:.4f}°")
 
     valid_marks = rtk_df["Reference Mark"].tolist()
 
