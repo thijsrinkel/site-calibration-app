@@ -113,25 +113,27 @@ if st.button("Compute Calibration"):
 
     valid_marks = rtk_df["Reference Mark"].tolist()  # Get valid reference marks after filtering
 
-    # 🔍 Debugging: Display raw residuals with column names
-    residuals_df_raw = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
-    residuals_df_raw.insert(0, "Reference Mark", valid_marks)  # Add reference mark column
-
-    st.write("### Debugging: Raw Residuals (X, Y, Z)")
-    st.dataframe(residuals_df_raw)  # Display formatted residuals table
-
-    # ✅ Compute horizontal residual instead of showing separate X and Y
-    horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)  # sqrt(X^2 + Y^2)
-    vertical_residuals = np.abs(residuals[:, 2])  # Z residuals
-
-    # 🔍 Check if lengths match
+    # 🔍 Debugging Step: Check lengths before inserting
     if len(valid_marks) != len(residuals):
         st.error(f"Mismatch detected: {len(valid_marks)} reference marks vs {len(residuals)} residuals.")
     else:
+        # ✅ Create DataFrame with named columns
+        residuals_df_raw = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
+
+        # ✅ Ensure valid_marks matches the DataFrame length
+        residuals_df_raw.insert(0, "Reference Mark", valid_marks)
+
+        st.write("### Debugging: Raw Residuals (X, Y, Z)")
+        st.dataframe(residuals_df_raw)  # Display formatted residuals table
+
+        # ✅ Compute horizontal residual instead of showing separate X and Y
+        horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3)
+        vertical_residuals = np.abs(residuals[:, 2]).round(3)
+
         residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
-            "Horizontal Residual": horizontal_residuals.round(3),
-            "Vertical Residual": vertical_residuals.round(3)
+            "Horizontal Residual": horizontal_residuals,
+            "Vertical Residual": vertical_residuals
         })
 
         st.subheader("Residuals per Reference Mark")
@@ -142,4 +144,5 @@ if st.button("Compute Calibration"):
         st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
 else:
     st.error("Calibration failed. Not enough valid reference marks or a mismatch in calculations.")
+
 
