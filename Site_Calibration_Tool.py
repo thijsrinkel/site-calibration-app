@@ -82,10 +82,30 @@ with st.sidebar:
     })
 
     st.subheader("📍 Enter Topo Measurements")
-    rtk_df = st.data_editor(default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data")
+    rtk_df = st.data_editor(
+    default_rtk_data, 
+    hide_index=True, 
+    num_rows="dynamic", 
+    key="rtk_data",
+    column_config={
+        "Easting": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
+        "Northing": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
+        "Height": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
+    }
+)
 
     st.subheader("📍 Enter Local Caisson Coordinates")
-    local_df = st.data_editor(default_local_data, hide_index=True, num_rows="dynamic", key="local_data")
+    local_df = st.data_editor(
+    default_local_data, 
+    hide_index=True, 
+    num_rows="dynamic", 
+    key="local_data",
+    column_config={
+        "X": st.column_config.NumberColumn(format="%.3f"),
+        "Y": st.column_config.NumberColumn(format="%.3f"),
+        "Z": st.column_config.NumberColumn(format="%.3f"),
+    }
+)
 
 # Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
