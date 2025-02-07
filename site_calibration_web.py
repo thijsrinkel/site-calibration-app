@@ -110,6 +110,7 @@ if st.button("Compute Calibration"):
         st.success(f"Heading: {heading:.4f}°")
 
         # Ensure reference mark indexing matches residuals
+        if len(residuals) == len(rtk_df):
         valid_marks = rtk_df["Reference Mark"].tolist()
         residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
@@ -119,7 +120,11 @@ if st.button("Compute Calibration"):
 
         st.subheader("Residuals per Reference Mark")
         st.dataframe(residuals_df)
+    else:
+        st.error("Mismatch between residuals and reference marks. Please check the calibration computation.")
 
-        # Notify about excluded reference marks
-        if excluded_marks:
-            st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
+    # Notify about excluded reference marks
+    if excluded_marks:
+        st.warning(f"Excluded Reference Marks due to high residuals: {', '.join(excluded_marks)}")
+
+       
