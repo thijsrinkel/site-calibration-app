@@ -136,8 +136,8 @@ def compute_calibration(rtk_df, local_df):
         valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
         if np.sum(valid_indices) < 3:
-            st.error("⚠️ Too few valid reference marks! At least 3 are required.")
-            return None, None, None, None, None, None, excluded_marks, valid_marks
+            st.warning("⚠️ Too few valid reference marks! Keeping the last 3 available.")
+            break  # Stop removing points to ensure 3 remain
 
         if np.all(valid_indices):
             break
@@ -148,11 +148,8 @@ def compute_calibration(rtk_df, local_df):
         rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
         local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
-        residuals = residuals[valid_indices]
-
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
-# Compute Calibration Button
 if st.button("📊 Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
