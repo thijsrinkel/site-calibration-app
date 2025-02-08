@@ -51,14 +51,14 @@ with st.sidebar:
     st.header("🔧 Input Calibration Data")
 
     default_rtk_data = pd.DataFrame({
-        "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
+        "Reference Mark": ["Ref 1", "Ref 2", "Ref 3", "Ref 4", "Ref 5", "Ref 6"],
         "Easting": [0.000] * 6,
         "Northing": [0.000] * 6,
         "Height": [0.000] * 6
     })
 
     default_local_data = pd.DataFrame({
-        "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
+        "Reference Mark": ["Ref 1", "Ref 2", "Ref 3", "Ref 4", "Ref 5", "Ref 6"],
         "X": [0.000] * 6,
         "Y": [0.000] * 6,
         "Z": [0.000] * 6
