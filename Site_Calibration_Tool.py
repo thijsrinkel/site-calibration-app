@@ -29,11 +29,11 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
 
     1️⃣ **Enter Your Data:**
     - Input the Topo measurements (Easting, Northing, Height).
-    - Enter the Local Caisson Coordinates (X, Y, Z).
+    - Enter the Local Caisson (QINSY) Coordinates (X, Y, Z).
 
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate **pitch, roll, heading, and residuals**.
-    - If **reference marks exceed the threshold**, they are **excluded**.
+    - If **Residual of the reference marks exceed the threshold of 0.03**, they are **excluded**.
 
     3️⃣ **Review the Results:**
     - The **residuals per reference mark** will be displayed.
@@ -42,7 +42,19 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     4️⃣ **Download the Results (Optional):**
     - Click **"⬇️ Download Residuals as CSV"** to save.
 
-    ⚠️ **Minimum 3 reference marks required!**
+        🌍 **Conventions**
+    - **Roll = Positive** → **Starboard up**.
+    - **Pitch = Positive** → **Bow Up**.
+    - **Heading = Grid north**.
+    - **X = Positive** → **Starboard**.
+    - **Y = Positive** → **Bow**.
+    - **Z = Positive** → **Up**.
+    ---
+    **Tips:**
+    - Ensure that at least **3 valid reference marks** remain after filtering.
+    - If too many reference marks are removed, try adjusting your input data.
+    - Ensure that your values have at least 2 decimals, preferably 3.
+    
     """)
 
 # 📌 Sidebar for Inputs
