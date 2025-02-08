@@ -30,7 +30,7 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     1️⃣ **Enter Your Data:**
     - Input the Topo measurements (Easting, Northing, Height).
     - Enter the Local Caisson Coordinates (X, Y, Z).
-        
+
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate **pitch, roll, heading, and residuals**.
     - If **reference marks exceed the threshold**, they are **excluded**.
@@ -50,7 +50,6 @@ with st.sidebar:
     st.image("TM_Edison_logo.jpg", width=150)
     st.header("🔧 Input Calibration Data")
 
-    # Default data for flexible number of reference marks
     default_rtk_data = pd.DataFrame({
         "Reference Mark": [f"Ref{i+1}" for i in range(6)],
         "Easting": [0.000] * 6,
@@ -85,7 +84,7 @@ with st.sidebar:
         }
     )
 
-# Function to Compute Calibration
+# ✅ **Fix: Improve Robustness of Compute Function**
 def compute_calibration(rtk_df, local_df):
     if len(rtk_df) < 3:
         st.error("⚠️ You need at least 3 reference marks to compute calibration.")
@@ -101,13 +100,22 @@ def compute_calibration(rtk_df, local_df):
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
         local_points = local_df[["X", "Y", "Z"]].values
 
+        if np.all(measured_points == measured_points[0]) or np.all(local_points == local_points[0]):
+            st.error("❌ Error: All input points are identical. Ensure at least 3 distinct reference marks.")
+            return None, None, None, None, None, None, None, None
+
         centroid_measured = np.mean(measured_points, axis=0)
         centroid_local = np.mean(local_points, axis=0)
 
         measured_centered = measured_points - centroid_measured
         local_centered = local_points - centroid_local
 
-        U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
+        try:
+            U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
+        except np.linalg.LinAlgError:
+            st.error("❌ SVD Computation Error: Input points may be collinear. Adjust input data.")
+            return None, None, None, None, None, None, None, None
+
         R_matrix = np.dot(U, Vt)
 
         if np.linalg.det(R_matrix) < 0:
@@ -144,29 +152,8 @@ def compute_calibration(rtk_df, local_df):
 
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
-# Compute Calibration Button
 if st.button("📊 Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
     if residuals is not None:
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.success(f"🚀 Pitch: {pitch:.4f}°")
-            st.success(f"🌀 Roll: {roll:.4f}°")
-            st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
-
-        with col2:
-            if excluded_marks:
-                st.warning(f"🚨 Excluded Reference Marks: {', '.join(excluded_marks)}")
-            else:
-                st.success("✅ No reference marks were excluded.")
-
-        residuals_df = pd.DataFrame({
-            "Reference Mark": valid_marks,
-            "Horizontal Residual": np.round(np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2), 3),
-            "Vertical Residual": np.round(np.abs(residuals[:, 2]), 3)
-        })
-
-        st.subheader("📌 Residuals per Reference Mark")
-        st.data_editor(residuals_df, hide_index=True)
+        st.success(f"🚀 Pitch: {pitch:.4f}° | 🌀 Roll: {roll:.4f}° | 🧭 Heading: {heading:.4f}°")
