@@ -16,7 +16,6 @@ st.markdown("""
         padding: 10px;
     }
     .stDataFrame { font-size: 14px; }
-    .stDataFrame tbody tr:last-child { display: none; }  /* Hide last row */
     </style>
 """, unsafe_allow_html=True)
 
@@ -67,10 +66,11 @@ with st.sidebar:
 
     st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(
-        default_rtk_data.set_index("Reference Mark"),  # Hide default index and keep "Reference Mark"
-        hide_index=True,  # Hides the default Streamlit index
+        default_rtk_data,  # Keep "Reference Mark" editable
+        hide_index=True,   # Hides the default Streamlit index
         key="rtk_data",
         column_config={
+            "Reference Mark": st.column_config.TextColumn(),  # Editable reference marks
             "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),
             "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001),
             "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),
@@ -79,10 +79,11 @@ with st.sidebar:
 
     st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(
-        default_local_data.set_index("Reference Mark"),  # Hide default index and keep "Reference Mark"
-        hide_index=True,  # Hides the default Streamlit index
+        default_local_data,  # Keep "Reference Mark" editable
+        hide_index=True,   # Hides the default Streamlit index
         key="local_data",
         column_config={
+            "Reference Mark": st.column_config.TextColumn(),  # Editable reference marks
             "X": st.column_config.NumberColumn(format="%.3f", step=0.001),
             "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),
             "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),
