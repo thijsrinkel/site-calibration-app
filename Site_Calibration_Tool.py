@@ -66,22 +66,12 @@ with st.sidebar:
 
     st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(
-        default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data",
-        column_config={
-            "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),
-            "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001),
-            "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),
-        }
+        default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data"
     )
 
     st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(
-        default_local_data, hide_index=True, num_rows="dynamic", key="local_data",
-        column_config={
-            "X": st.column_config.NumberColumn(format="%.3f", step=0.001),
-            "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),
-            "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),
-        }
+        default_local_data, hide_index=True, num_rows="dynamic", key="local_data"
     )
 
 # Function to Compute Calibration
@@ -93,7 +83,7 @@ def compute_calibration(rtk_df, local_df):
     excluded_marks = []
     valid_marks = rtk_df["Reference Mark"].tolist()
 
-    while len(valid_marks) >= 3:
+    while len(valid_marks) > 3:  # Ensure we keep at least 3 marks
         rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
         local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
 
@@ -110,12 +100,7 @@ def compute_calibration(rtk_df, local_df):
         measured_centered = measured_points - centroid_measured
         local_centered = local_points - centroid_local
 
-        try:
-            U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
-        except np.linalg.LinAlgError:
-            st.error("❌ SVD Computation Error: Input points may be collinear. Adjust input data.")
-            return None, None, None, None, None, None, None, None
-
+        U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
         R_matrix = np.dot(U, Vt)
 
         if np.linalg.det(R_matrix) < 0:
@@ -135,11 +120,7 @@ def compute_calibration(rtk_df, local_df):
 
         valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
-        if np.sum(valid_indices) < 3:
-            st.warning("⚠️ Too few valid reference marks! Keeping the last 3 available.")
-            break  # Stop removing points to ensure 3 remain
-
-        if np.all(valid_indices):
+        if np.sum(valid_indices) >= 3:
             break
 
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
@@ -150,6 +131,7 @@ def compute_calibration(rtk_df, local_df):
 
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
+# Compute Calibration Button
 if st.button("📊 Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
