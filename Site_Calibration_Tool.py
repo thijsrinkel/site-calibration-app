@@ -21,44 +21,6 @@ st.markdown("""
 
 st.image("TM_Edison_logo.jpg", width=150)
 st.title("📍 Site Calibration Tool")
-# 📖 User Guide - Expandable Section
-with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
-    st.markdown("""
-    Welcome to the **Site Calibration Tool**! Follow these steps to use the tool correctly:
-
-    1️⃣ **Enter Your Data:**
-    - Input the Topo measurements (Easting, Northing, Height) in the first table.
-    - Enter the Local Caisson Coordinates (X, Y, Z) in the second table.
-        
-    2️⃣ **Click 'Compute Calibration':**
-    - The tool will calculate the **pitch, roll, heading, and residuals**.
-    - If any **reference marks exceed the threshold**, they will be **excluded automatically**.
-
-    3️⃣ **Review the Results:**
-    - The **residuals per reference mark** will be displayed in a table.
-    - Excluded reference marks will be shown in a warning message.
-
-    4️⃣ **Download the Results (Optional):**
-    - Click the **"⬇️ Download Residuals as CSV"** button to save the results.
-    
-    🌍 **Conventions**
-    - **Roll** = **Positive** → **Starboard up**.
-    - **Pitch** = **Positive** → **Bow Up**.
-    - **Heading = Grid north**
-    - **X** = **Positive** → **Starboard**.
-    - **Y** = **Positive** → **Bow**.
-    - **Z** = **Positive** → **Up**.
-    
-    ---
-    **Tips:**
-    - Ensure that at least **3 valid reference marks** remain after filtering.
-    - If too many reference marks are removed, try adjusting your input data.
-    - Ensure that your values have at least 2 decimals, preferably 3.
-
-    ⚡ **Need help?** Contact thijs.rinkel@jandenul.com.
-    """)
-
-
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
@@ -83,82 +45,72 @@ with st.sidebar:
 
     st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(
-    default_rtk_data, 
-    hide_index=True, 
-    num_rows="dynamic", 
-    key="rtk_data",
-    column_config={
-        "Easting": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
-        "Northing": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
-        "Height": st.column_config.NumberColumn(format="%.3f"),  # 3 decimal places, no comma
-    }
-)
+        default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data"
+    )
 
     st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(
-    default_local_data, 
-    hide_index=True, 
-    num_rows="dynamic", 
-    key="local_data",
-    column_config={
-        "X": st.column_config.NumberColumn(format="%.3f"),
-        "Y": st.column_config.NumberColumn(format="%.3f"),
-        "Z": st.column_config.NumberColumn(format="%.3f"),
-    }
-)
+        default_local_data, hide_index=True, num_rows="dynamic", key="local_data"
+    )
 
 # Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
     excluded_marks = []
-    valid_marks = rtk_df["Reference Mark"].tolist()  # Track valid reference marks
+    valid_marks = rtk_df["Reference Mark"].tolist()  
 
-    while True:
+    while len(valid_marks) >= 3:
         rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
         local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
 
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
         local_points = local_df[["X", "Y", "Z"]].values
 
+        # Compute centroids
         centroid_measured = np.mean(measured_points, axis=0)
         centroid_local = np.mean(local_points, axis=0)
 
+        # Center points
         measured_centered = measured_points - centroid_measured
         local_centered = local_points - centroid_local
 
+        # Singular Value Decomposition (SVD)
         U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
         R_matrix = np.dot(U, Vt)
 
+        # Ensure proper rotation (correct determinant sign)
         if np.linalg.det(R_matrix) < 0:
             U[:, -1] *= -1
             R_matrix = np.dot(U, Vt)
 
+        # Compute Euler angles
         rotation = R.from_matrix(R_matrix)
         euler_angles = rotation.as_euler('xyz', degrees=True)
+        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
-        pitch = euler_angles[1]
-        roll = euler_angles[0]
-        heading = (euler_angles[2] + 360) % 360
-
+        # Compute translation
         translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
         transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
+        # Compute residuals
         residuals = transformed_points - local_points
-        horizontal_residuals = np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2)
+        horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
         vertical_residuals = np.abs(residuals[:, 2])
 
+        # Check which marks exceed threshold
         valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
         if np.sum(valid_indices) < 3:
             st.error("⚠️ Too few valid reference marks! At least 3 are required.")
-            return None, None, None, None, None, None, None, valid_marks
+            return None, None, None, None, None, None, excluded_marks, valid_marks
 
         if np.all(valid_indices):
-            break
+            break  # Exit loop if all marks are valid
 
+        # Identify worst mark to exclude
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-        excluded_marks.append(valid_marks[worst_index])
-        valid_marks.pop(worst_index)
+        excluded_marks.append(valid_marks.pop(worst_index))
 
+        # Drop the worst index from dataframes
         rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
         local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
@@ -186,8 +138,8 @@ if st.button("📊 Compute Calibration"):
 
         residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
-            "Horizontal Residual": np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2).round(3),
-            "Vertical Residual": np.abs(residuals[:, 2]).round(3)
+            "Horizontal Residual": np.round(np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2), 3),
+            "Vertical Residual": np.round(np.abs(residuals[:, 2]), 3)
         })
 
         st.subheader("📌 Residuals per Reference Mark")
@@ -200,4 +152,3 @@ if st.button("📊 Compute Calibration"):
             raw_residuals_df = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
             raw_residuals_df.insert(0, "Reference Mark", valid_marks)
             st.dataframe(raw_residuals_df)
-
