@@ -84,7 +84,7 @@ with st.sidebar:
         }
     )
 
-# ✅ **Fix: Improve Robustness of Compute Function**
+# Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
     if len(rtk_df) < 3:
         st.error("⚠️ You need at least 3 reference marks to compute calibration.")
@@ -152,8 +152,21 @@ def compute_calibration(rtk_df, local_df):
 
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
+# Compute Calibration Button
 if st.button("📊 Compute Calibration"):
     pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
     if residuals is not None:
         st.success(f"🚀 Pitch: {pitch:.4f}° | 🌀 Roll: {roll:.4f}° | 🧭 Heading: {heading:.4f}°")
+
+        residuals_df = pd.DataFrame({
+            "Reference Mark": valid_marks,
+            "Horizontal Residual": np.round(np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2), 3),
+            "Vertical Residual": np.round(np.abs(residuals[:, 2]), 3)
+        })
+
+        st.subheader("📌 Residuals per Reference Mark")
+        st.data_editor(residuals_df, hide_index=True)
+
+        csv = residuals_df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download Residuals as CSV", csv, "residuals.csv", "text/csv")
