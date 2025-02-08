@@ -22,6 +22,37 @@ st.markdown("""
 st.image("TM_Edison_logo.jpg", width=150)
 st.title("📍 Site Calibration Tool")
 
+# 📖 User Guide - Expandable Section
+with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
+    st.markdown("""
+    Welcome to the **Site Calibration Tool**! Follow these steps:
+
+    1️⃣ **Enter Your Data:**
+    - Input the Topo measurements (Easting, Northing, Height).
+    - Enter the Local Caisson Coordinates (X, Y, Z).
+        
+    2️⃣ **Click 'Compute Calibration':**
+    - The tool will calculate **pitch, roll, heading, and residuals**.
+    - If **reference marks exceed the threshold**, they are **excluded**.
+
+    3️⃣ **Review the Results:**
+    - The **residuals per reference mark** will be displayed.
+    - Excluded marks will be shown as a warning.
+
+    4️⃣ **Download the Results (Optional):**
+    - Click **"⬇️ Download Residuals as CSV"** to save.
+
+    🌍 **Conventions**
+    - **Roll = Positive** → **Starboard up**.
+    - **Pitch = Positive** → **Bow Up**.
+    - **Heading = Grid north**.
+    - **X = Positive** → **Starboard**.
+    - **Y = Positive** → **Bow**.
+    - **Z = Positive** → **Up**.
+
+    ⚡ **Need help?** Contact thijs.rinkel@jandenul.com.
+    """)
+
 # 📌 Sidebar for Inputs
 with st.sidebar:
     st.image("TM_Edison_logo.jpg", width=150)
@@ -45,13 +76,31 @@ with st.sidebar:
 
     st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(
-        default_rtk_data, hide_index=True, num_rows="dynamic", key="rtk_data"
+        default_rtk_data, 
+        hide_index=True, 
+        num_rows="dynamic", 
+        key="rtk_data",
+        column_config={
+            "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),  # No thousands separator
+            "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001), 
+            "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+        }
     )
 
     st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(
-        default_local_data, hide_index=True, num_rows="dynamic", key="local_data"
+        default_local_data, 
+        hide_index=True, 
+        num_rows="dynamic", 
+        key="local_data",
+        column_config={
+            "X": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+            "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+            "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+        }
     )
+
+
 
 # Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
