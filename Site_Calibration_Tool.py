@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-st.set_page_config(page_title="Site Calibration Tool", layout="wide")  # Set page title & layout
+st.set_page_config(page_title="Site Calibration Tool", layout="wide")
 
 # 🎨 Custom Styling
 st.markdown("""
@@ -16,13 +16,14 @@ st.markdown("""
         padding: 10px;
     }
     .stDataFrame { font-size: 14px; }
+    .stDataFrame tbody tr:last-child { display: none; }  /* Hide last row */
     </style>
 """, unsafe_allow_html=True)
 
 st.image("TM_Edison_logo.jpg", width=150)
 st.title("📍 Site Calibration Tool")
 
-# 📖 User Guide - Expandable Section
+# 📖 User Guide
 with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     st.markdown("""
     Welcome to the **Site Calibration Tool**! Follow these steps:
@@ -30,7 +31,7 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     1️⃣ **Enter Your Data:**
     - Input the Topo measurements (Easting, Northing, Height).
     - Enter the Local Caisson Coordinates (X, Y, Z).
-        
+
     2️⃣ **Click 'Compute Calibration':**
     - The tool will calculate **pitch, roll, heading, and residuals**.
     - If **reference marks exceed the threshold**, they are **excluded**.
@@ -42,64 +43,51 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     4️⃣ **Download the Results (Optional):**
     - Click **"⬇️ Download Residuals as CSV"** to save.
 
-    🌍 **Conventions**
-    - **Roll = Positive** → **Starboard up**.
-    - **Pitch = Positive** → **Bow Up**.
-    - **Heading = Grid north**.
-    - **X = Positive** → **Starboard**.
-    - **Y = Positive** → **Bow**.
-    - **Z = Positive** → **Up**.
-
-    ⚡ **Need help?** Contact thijs.rinkel@jandenul.com.
+    ⚠️ **Minimum 3 reference marks required!**
     """)
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
     st.image("TM_Edison_logo.jpg", width=150)
     st.header("🔧 Input Calibration Data")
-    
-    # Default RTK Data
+
     default_rtk_data = pd.DataFrame({
         "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
-        "Easting": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
-        "Northing": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
-        "Height": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
+        "Easting": [0.000] * 6,
+        "Northing": [0.000] * 6,
+        "Height": [0.000] * 6
     })
 
-    # Default Local Data
     default_local_data = pd.DataFrame({
         "Reference Mark": ["Ref1", "Ref2", "Ref3", "Ref4", "Ref5", "Ref6"],
-        "X": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
-        "Y": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000],
-        "Z": [0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
+        "X": [0.000] * 6,
+        "Y": [0.000] * 6,
+        "Z": [0.000] * 6
     })
 
     st.subheader("📍 Enter Topo Measurements")
     rtk_df = st.data_editor(
-        default_rtk_data, 
-        hide_index=True, 
-        num_rows="dynamic", 
+        default_rtk_data.set_index("Reference Mark"),  # Hide default index and keep "Reference Mark"
+        hide_index=True,  # Hides the default Streamlit index
         key="rtk_data",
         column_config={
-            "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),  # No thousands separator
-            "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001), 
-            "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+            "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),
         }
     )
 
     st.subheader("📍 Enter Local Caisson Coordinates")
     local_df = st.data_editor(
-        default_local_data, 
-        hide_index=True, 
-        num_rows="dynamic", 
+        default_local_data.set_index("Reference Mark"),  # Hide default index and keep "Reference Mark"
+        hide_index=True,  # Hides the default Streamlit index
         key="local_data",
         column_config={
-            "X": st.column_config.NumberColumn(format="%.3f", step=0.001),  
-            "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),  
-            "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),  
+            "X": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),
         }
     )
-
 
 
 # Function to Compute Calibration
