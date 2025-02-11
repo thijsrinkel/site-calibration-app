@@ -173,9 +173,17 @@ def compute_calibration(rtk_df, local_df):
             st.error("🚨 Error: Local coordinate data is missing or contains NaN values.")
             return None, None, None, None, None, None, None, None
 
-        if local_centered.size == 0 or np.any(np.isnan(local_centered)):
-            st.error("🚨 Error: Computed local-centered data is invalid (empty or NaN).")
+        # Ensure local_centered is in float format
+        local_centered = local_centered.astype(float)
+
+# Debug: Check for NaN values again
+        nan_check = np.isnan(local_centered)
+        st.write("NaN Check (Should be all False):", nan_check)
+
+        if local_centered.size == 0 or np.any(nan_check):
+            st.error("🚨 Error: Computed local-centered data is invalid (empty or contains NaN).")
             return None, None, None, None, None, None, None, None
+
 
 
         denominator = np.sum(np.linalg.norm(local_centered, axis=1))
