@@ -120,7 +120,12 @@ def compute_calibration(rtk_df, local_df):
         centroid_local = np.mean(local_points, axis=0)
 
       # Compute Scale Factor (S)
-        scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / np.sum(np.linalg.norm(local_centered, axis=1))
+       denominator = np.sum(np.linalg.norm(local_centered, axis=1))
+        if denominator == 0:  # Avoid division by zero
+            scale_factor = 1.0  # Default to no scaling if local_centered is degenerate
+        else:
+            scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / denominator
+
 
         # Apply scaling to local points
         local_centered *= scale_factor
