@@ -1,6 +1,7 @@
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+import streamlit as st
+from scipy.optimize import leastsq
 from scipy.spatial.transform import Rotation as R
 
 st.set_page_config(page_title="Site Calibration Tool", layout="wide")
@@ -101,8 +102,23 @@ with st.sidebar:
             "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),
         }
     )
+    
+def fit_plane(points):
+    """Fits a plane to a set of (x, y, z) points and returns the normal vector."""
+    X = points[:, :2]  # Take only (Easting, Northing)
+    X = np.column_stack((X, np.ones(X.shape[0])))  # Add column for offset
+    Y = points[:, 2]  # Take Z values
 
+    # Solve for plane coefficients Ax + By + C = Z using least squares
+    coeffs, _, _, _ = np.linalg.lstsq(X, Y, rcond=None)
+    A, B, C = coeffs  # Plane equation: Ax + By + C = Z
 
+    # Compute plane normal
+    normal = np.array([-A, -B, 1])
+    normal /= np.linalg.norm(normal)  # Normalize vector
+    
+    return A, B, normal
+    
 # Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
     excluded_marks = []
@@ -128,29 +144,20 @@ def compute_calibration(rtk_df, local_df):
         measured_points = rtk_data[["Easting", "Northing", "Height"]].values
         local_points = local_data[["X", "Y", "Z"]].values
 
-        # Compute centroids
-        centroid_measured = np.mean(measured_points, axis=0)
-        centroid_local = np.mean(local_points, axis=0)
+        # Compute best-fit plane
+        A, B, normal = fit_plane(measured_points)
 
-        # Compute slope differences
-        dX = local_points[:, 0] - measured_points[:, 0]  # X difference
-        dY = local_points[:, 1] - measured_points[:, 1]  # Y difference
-        dZ = local_points[:, 2] - measured_points[:, 2]  # Z difference
+        # Compute slopes
+        slope_easting = A * 1e6  # Convert to ppm
+        slope_northing = B * 1e6  # Convert to ppm
 
-        # Prevent extreme values due to small or zero ΔZ
-        dZ[np.abs(dZ) < 0.001] = np.sign(dZ[np.abs(dZ) < 0.001]) * 0.001  # Set a minimum threshold for ΔZ
-
-        # Compute slope factors (ppm)
-        slope_easting = np.nanmean((dX / dZ) * 1e6)
-        slope_northing = np.nanmean((dY / dZ) * 1e6)
-
-        # Convert slopes to angles
-        roll = np.degrees(np.arctan(slope_easting / 1e6))  # Roll from slope easting
-        pitch = np.degrees(np.arctan(slope_northing / 1e6))  # Pitch from slope northing
+        # Compute roll and pitch
+        roll = np.degrees(np.arctan(A))  # Roll from slope east-west
+        pitch = np.degrees(np.arctan(B))  # Pitch from slope north-south
 
         # Compute heading using SVD method
-        measured_centered = measured_points - centroid_measured
-        local_centered = local_points - centroid_local
+        measured_centered = measured_points - np.mean(measured_points, axis=0)
+        local_centered = local_points - np.mean(local_points, axis=0)
         U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
         R_matrix = np.dot(U, Vt)
 
@@ -164,7 +171,7 @@ def compute_calibration(rtk_df, local_df):
         heading = (euler_angles[2] + 360) % 360  # Ensure heading is 0-360°
 
         # Compute residuals
-        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
+        translation = np.mean(local_points, axis=0) - np.dot(np.mean(measured_points, axis=0), R_matrix.T)
         transformed_points = np.dot(measured_points, R_matrix.T) + translation
         residuals = transformed_points - local_points
         horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
