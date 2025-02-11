@@ -119,9 +119,9 @@ def compute_calibration(rtk_df, local_df):
         local_points = local_df[["X", "Y", "Z"]].values
 
 # If data is empty after cleaning, return an error
-if rtk_df.empty or local_df.empty:
-    st.error("🚨 Error: After removing NaN values, there is not enough data to compute calibration.")
-    return None, None, None, None, None, None, None, None
+    if rtk_df.empty or local_df.empty:
+        st.error("🚨 Error: After removing NaN values, there is not enough data to compute calibration.")
+        return None, None, None, None, None, None, None, None
 
         # Compute centroids
     centroid_measured = np.mean(measured_points, axis=0)
