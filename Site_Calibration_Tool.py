@@ -64,10 +64,11 @@ def compute_trimble_calibration(rtk_df, local_df):
         transformed_points = scale * (measured @ rotation_matrix.T) + translation_vector
         return (transformed_points - local).flatten()
 
-    initial_guess = np.array([1.0, 0.0, 0.0, 0.0, *(np.mean(local_points, axis=0) - np.mean(measured_points, axis=0))])
+    # Use Trimble-provided scale factor
+    fixed_scale_factor = np.sum(np.linalg.norm(local_points[1:] - local_points[:-1], axis=1)) / np.sum(np.linalg.norm(measured_points[1:] - measured_points[:-1], axis=1))
+    initial_guess = np.array([fixed_scale_factor, 0.0, 0.0, 0.0, *(np.mean(local_points, axis=0) - np.mean(measured_points, axis=0))])
     result = least_squares(residuals, initial_guess, args=(measured_points, local_points))
     
-    optimized_scale = result.x[0]
     optimized_rotation = result.x[1:4]
     optimized_translation = result.x[4:]
     rotation_matrix = R.from_rotvec(optimized_rotation).as_matrix()
@@ -79,11 +80,17 @@ def compute_trimble_calibration(rtk_df, local_df):
     euler_angles = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
     roll, pitch, heading = euler_angles[0], euler_angles[1], (euler_angles[2] + 360) % 360
 
+    # Convert heading to degrees, minutes, seconds format (DMS)
+    heading_deg = int(heading)
+    heading_min = int((heading - heading_deg) * 60)
+    heading_sec = (heading - heading_deg - heading_min / 60) * 3600
+    heading_dms = f"{heading_deg}° {heading_min}' {heading_sec:.2f}\""
+
     # Compute refined translation after applying rotation and scaling
-    transformed_points = optimized_scale * (measured_points @ rotation_matrix.T) + optimized_translation
+    transformed_points = fixed_scale_factor * (measured_points @ rotation_matrix.T) + optimized_translation
     refined_translation = np.mean(local_points - transformed_points, axis=0)
 
-    return optimized_scale, roll, pitch, heading, refined_translation
+    return fixed_scale_factor, roll, pitch, heading_dms, refined_translation
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
@@ -93,5 +100,5 @@ if st.button("📊 Compute Calibration"):
         st.success(f"📏 Computed Scale Factor: {scale_factor:.8f}")
         st.success(f"🌀 Roll: {roll:.4f}°")
         st.success(f"🚀 Pitch: {pitch:.4f}°")
-        st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
+        st.success(f"🧭 Heading[GRID]: {heading}")
         st.success(f"📍 Translation Adjustment: X={translation[0]:.4f}, Y={translation[1]:.4f}, Z={translation[2]:.4f}")
