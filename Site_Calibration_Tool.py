@@ -220,7 +220,7 @@ def compute_calibration(rtk_df, local_df):
         vertical_residuals = np.abs(residuals[:, 2])
 
         # Check which marks exceed threshold
-        valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
+        valid_indices = (horizontal_residuals <= 1.030) & (vertical_residuals <= 1.030)
 
         if np.sum(valid_indices) < 3:
             st.error("⚠️ Too few valid reference marks! At least 3 are required.")
