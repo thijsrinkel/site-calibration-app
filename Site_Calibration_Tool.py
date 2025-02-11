@@ -161,8 +161,12 @@ def compute_calibration(rtk_df, local_df):
             st.error("🚨 Error: Computed centroids contain NaN values.")
             return None, None, None, None, None, None, None, None
         # Compute centered points
-        measured_centered = measured_points - centroid_measured
-        local_centered = local_points - centroid_local
+        # Compute Scale Factor (S)
+        scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / np.sum(np.linalg.norm(local_centered, axis=1))
+
+# Apply scaling to local points
+        local_centered *= scale_factor
+
 
         # Debug: Print centered points
         st.write("Local Centered Shape:", local_centered.shape)
