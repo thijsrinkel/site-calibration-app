@@ -112,8 +112,16 @@ def compute_calibration(rtk_df, local_df):
         rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
         local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
 
+        rtk_df = rtk_df.dropna()
+        local_df = local_df.dropna()
+
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
         local_points = local_df[["X", "Y", "Z"]].values
+
+# If data is empty after cleaning, return an error
+if rtk_df.empty or local_df.empty:
+    st.error("🚨 Error: After removing NaN values, there is not enough data to compute calibration.")
+    return None, None, None, None, None, None, None, None
 
         # Compute centroids
         centroid_measured = np.mean(measured_points, axis=0)
