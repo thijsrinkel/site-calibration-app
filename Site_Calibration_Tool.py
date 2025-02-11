@@ -189,15 +189,15 @@ def compute_calibration(rtk_df, local_df):
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
-    pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
+    slope_easting, slope_northing, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
     if residuals is not None:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.success(f"🚀 Pitch: {pitch:.4f}°")
-            st.success(f"🌀 Roll: {roll:.4f}°")
-            st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
+            st.success(f"📏 Slope Easting (ppm): {slope_easting:.2f}")
+            st.success(f"📐 Slope Northing (ppm): {slope_northing:.2f}")
+            st.success(f"🧭 Heading [GRID]: {heading:.4f}°")
 
         with col2:
             if excluded_marks:
@@ -221,3 +221,4 @@ if st.button("📊 Compute Calibration"):
             raw_residuals_df = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
             raw_residuals_df.insert(0, "Reference Mark", valid_marks)
             st.dataframe(raw_residuals_df)
+
