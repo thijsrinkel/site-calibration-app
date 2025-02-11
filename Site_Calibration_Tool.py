@@ -115,17 +115,58 @@ def compute_calibration(rtk_df, local_df):
         rtk_df = rtk_df.dropna()
         local_df = local_df.dropna()
 
+        st.write("📌 Debugging: Checking Input Data")
+
+        # Drop any NaN values in the DataFrames
+        rtk_df = rtk_df.dropna()
+        local_df = local_df.dropna()
+
+        # Ensure DataFrames are not empty after dropping NaNs
+        if rtk_df.empty or local_df.empty:
+            st.error("🚨 Error: After removing NaN values, the dataset is empty.")
+            return None, None, None, None, None, None, None, None
+
+        # Convert to NumPy arrays
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
         local_points = local_df[["X", "Y", "Z"]].values
+
+        # Print debug information
+        st.write(f"Measured Points Shape: {measured_points.shape}")
+        st.write(f"Local Points Shape: {local_points.shape}")
+
+        # Check for NaNs or empty points
+        if np.any(np.isnan(measured_points)) or np.any(np.isnan(local_points)):
+            st.error("🚨 Error: Input data contains NaN values.")
+            return None, None, None, None, None, None, None, None
+
 
 # If data is empty after cleaning, return an error
         if rtk_df.empty or local_df.empty:
             st.error("🚨 Error: After removing NaN values, there is not enough data to compute calibration.")
             return None, None, None, None, None, None, None, None
 
-        # Compute centroids
-            centroid_measured = np.mean(measured_points, axis=0)
-            centroid_local = np.mean(local_points, axis=0)
+        if measured_points.size == 0 or local_points.size == 0:
+            st.error("🚨 Error: No valid data points available for centroid calculation.")
+            return None, None, None, None, None, None, None, None
+
+        centroid_measured = np.mean(measured_points, axis=0)
+        centroid_local = np.mean(local_points, axis=0)
+
+        # Debug print centroids
+        st.write(f"Centroid Measured: {centroid_measured}")
+        st.write(f"Centroid Local: {centroid_local}")
+
+        # Check for NaN in centroids
+        if np.any(np.isnan(centroid_measured)) or np.any(np.isnan(centroid_local)):
+            st.error("🚨 Error: Computed centroids contain NaN values.")
+            return None, None, None, None, None, None, None, None
+        # Compute centered points
+        measured_centered = measured_points - centroid_measured
+        local_centered = local_points - centroid_local
+
+        # Debug: Print centered points
+        st.write("Local Centered Shape:", local_centered.shape)
+        st.write("Local Centered Data:", local_centered)
 
       # Compute Scale Factor (S)
         if local_points.size == 0 or np.any(np.isnan(local_points)):
