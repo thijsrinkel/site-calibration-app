@@ -138,7 +138,7 @@ def compute_calibration(rtk_df, local_df):
         dZ = local_points[:, 2] - measured_points[:, 2]  # Z difference
 
         # Prevent extreme values due to small or zero ΔZ
-        dZ[np.abs(dZ) < 1e-6] = np.nan  # Replace very small Z-differences
+        dZ[np.abs(dZ) < 0.001] = np.sign(dZ[np.abs(dZ) < 0.001]) * 0.001  # Set a minimum threshold for ΔZ
 
         # Compute slope factors (ppm)
         slope_easting = np.nanmean((dX / dZ) * 1e6)
@@ -190,6 +190,7 @@ def compute_calibration(rtk_df, local_df):
         local_data = local_data.drop(index=worst_index).reset_index(drop=True)
 
         residuals = residuals[valid_indices]
+        valid_marks = [valid_marks[i] for i in range(len(valid_marks)) if valid_indices[i]]  # Ensure length matches residuals
 
     return slope_easting, slope_northing, roll, pitch, heading, residuals, excluded_marks, valid_marks
 
