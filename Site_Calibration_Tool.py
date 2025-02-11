@@ -178,7 +178,7 @@ def compute_calibration(rtk_df, local_df):
         return None, None, None, None, None, None, excluded_marks, valid_marks
 
     if np.all(valid_indices):
-    break  # Exit loop if all marks are valid
+        break  # Exit loop if all marks are valid
 
         # Identify worst mark to exclude
     worst_index = np.argmax(horizontal_residuals + vertical_residuals)
