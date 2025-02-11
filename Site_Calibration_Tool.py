@@ -120,12 +120,15 @@ def compute_calibration(rtk_df, local_df):
         centroid_local = np.mean(local_points, axis=0)
 
       # Compute Scale Factor (S)
+        if local_centered.size == 0 or np.any(np.isnan(local_centered)):
+            st.error("🚨 Error: Local coordinates contain invalid (NaN) or missing values.")
+            return None, None, None, None, None, None, None, None
+
         denominator = np.sum(np.linalg.norm(local_centered, axis=1))
         if denominator == 0:  # Avoid division by zero
             scale_factor = 1.0  # Default to no scaling if local_centered is degenerate
         else:
             scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / denominator
-
 
         # Apply scaling to local points
         local_centered *= scale_factor
