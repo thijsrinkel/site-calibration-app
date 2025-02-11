@@ -112,93 +112,16 @@ def compute_calibration(rtk_df, local_df):
         rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
         local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
 
-        rtk_df = rtk_df.dropna()
-        local_df = local_df.dropna()
-
-        st.write("📌 Debugging: Checking Input Data")
-
-        # Drop any NaN values in the DataFrames
-        rtk_df = rtk_df.dropna()
-        local_df = local_df.dropna()
-
-        # Ensure DataFrames are not empty after dropping NaNs
-        if rtk_df.empty or local_df.empty:
-            st.error("🚨 Error: After removing NaN values, the dataset is empty.")
-            return None, None, None, None, None, None, None, None
-
-        # Convert to NumPy arrays
         measured_points = rtk_df[["Easting", "Northing", "Height"]].values
         local_points = local_df[["X", "Y", "Z"]].values
 
-        # Print debug information
-        st.write(f"Measured Points Shape: {measured_points.shape}")
-        st.write(f"Local Points Shape: {local_points.shape}")
-
-        # Check for NaNs or empty points
-        if np.any(np.isnan(measured_points)) or np.any(np.isnan(local_points)):
-            st.error("🚨 Error: Input data contains NaN values.")
-            return None, None, None, None, None, None, None, None
-
-
-# If data is empty after cleaning, return an error
-        if rtk_df.empty or local_df.empty:
-            st.error("🚨 Error: After removing NaN values, there is not enough data to compute calibration.")
-            return None, None, None, None, None, None, None, None
-
-        if measured_points.size == 0 or local_points.size == 0:
-            st.error("🚨 Error: No valid data points available for centroid calculation.")
-            return None, None, None, None, None, None, None, None
-
+        # Compute centroids
         centroid_measured = np.mean(measured_points, axis=0)
         centroid_local = np.mean(local_points, axis=0)
 
-        # Debug print centroids
-        st.write(f"Centroid Measured: {centroid_measured}")
-        st.write(f"Centroid Local: {centroid_local}")
-
-        # Check for NaN in centroids
-        if np.any(np.isnan(centroid_measured)) or np.any(np.isnan(centroid_local)):
-            st.error("🚨 Error: Computed centroids contain NaN values.")
-            return None, None, None, None, None, None, None, None
-        # Compute centered points
-        # Compute Scale Factor (S)
-        scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / np.sum(np.linalg.norm(local_centered, axis=1))
-
-# Apply scaling to local points
-        local_centered *= scale_factor
-
-
-        # Debug: Print centered points
-        st.write("Local Centered Shape:", local_centered.shape)
-        st.write("Local Centered Data:", local_centered)
-
-      # Compute Scale Factor (S)
-        if local_points.size == 0 or np.any(np.isnan(local_points)):
-            st.error("🚨 Error: Local coordinate data is missing or contains NaN values.")
-            return None, None, None, None, None, None, None, None
-
-        # Ensure local_centered is in float format
-        local_centered = local_centered.astype(float)
-
-# Debug: Check for NaN values again
-        nan_check = np.isnan(local_centered)
-        st.write("NaN Check (Should be all False):", nan_check)
-
-        if local_centered.size == 0 or np.any(nan_check):
-            st.error("🚨 Error: Computed local-centered data is invalid (empty or contains NaN).")
-            return None, None, None, None, None, None, None, None
-
-
-
-        denominator = np.sum(np.linalg.norm(local_centered, axis=1))
-        if denominator == 0:  # Avoid division by zero
-            scale_factor = 1.0  # Default to no scaling if local_centered is degenerate
-        else:
-            scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / denominator
-
-        # Apply scaling to local points
-        local_centered *= scale_factor
-
+        # Center points
+        measured_centered = measured_points - centroid_measured
+        local_centered = local_points - centroid_local
 
         # Singular Value Decomposition (SVD)
         U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
@@ -215,8 +138,8 @@ def compute_calibration(rtk_df, local_df):
         pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
         # Compute translation
-        translation = centroid_measured - np.dot(centroid_local, R_matrix.T) * scale_factor
-        transformed_points = np.dot(local_points * scale_factor, R_matrix.T) + translation
+        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
+        transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
         # Compute residuals
         residuals = transformed_points - local_points
@@ -224,7 +147,7 @@ def compute_calibration(rtk_df, local_df):
         vertical_residuals = np.abs(residuals[:, 2])
 
         # Check which marks exceed threshold
-        valid_indices = (horizontal_residuals <= 1.030) & (vertical_residuals <= 1.030)
+        valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
         if np.sum(valid_indices) < 3:
             st.error("⚠️ Too few valid reference marks! At least 3 are required.")
@@ -234,14 +157,14 @@ def compute_calibration(rtk_df, local_df):
             break  # Exit loop if all marks are valid
 
         # Identify worst mark to exclude
-    worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-    excluded_marks.append(valid_marks.pop(worst_index))
+        worst_index = np.argmax(horizontal_residuals + vertical_residuals)
+        excluded_marks.append(valid_marks.pop(worst_index))
 
         # Drop the worst index from dataframes
-    rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
-    local_df = local_df.drop(index=worst_index).reset_index(drop=True)
+        rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
+        local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
-    residuals = residuals[valid_indices]
+        residuals = residuals[valid_indices]
 
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
@@ -256,10 +179,6 @@ if st.button("📊 Compute Calibration"):
             st.success(f"🚀 Pitch: {pitch:.4f}°")
             st.success(f"🌀 Roll: {roll:.4f}°")
             st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
-            st.info(f"📏 Scale Factor: {scale_factor:.6f}")
-            st.text(f"Translation Vector: {translation}")
-            st.text(f"Rotation Matrix:\n{R_matrix}")
-
 
         with col2:
             if excluded_marks:
