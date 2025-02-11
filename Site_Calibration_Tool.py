@@ -119,9 +119,12 @@ def compute_calibration(rtk_df, local_df):
         centroid_measured = np.mean(measured_points, axis=0)
         centroid_local = np.mean(local_points, axis=0)
 
-        # Center points
-        measured_centered = measured_points - centroid_measured
-        local_centered = local_points - centroid_local
+      # Compute Scale Factor (S)
+        scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / np.sum(np.linalg.norm(local_centered, axis=1))
+
+        # Apply scaling to local points
+        local_centered *= scale_factor
+
 
         # Singular Value Decomposition (SVD)
         U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
@@ -138,8 +141,8 @@ def compute_calibration(rtk_df, local_df):
         pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
         # Compute translation
-        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
-        transformed_points = np.dot(measured_points, R_matrix.T) + translation
+        translation = centroid_measured - np.dot(centroid_local, R_matrix.T) * scale_factor
+        transformed_points = np.dot(local_points * scale_factor, R_matrix.T) + translation
 
         # Compute residuals
         residuals = transformed_points - local_points
@@ -179,6 +182,10 @@ if st.button("📊 Compute Calibration"):
             st.success(f"🚀 Pitch: {pitch:.4f}°")
             st.success(f"🌀 Roll: {roll:.4f}°")
             st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
+            st.info(f"📏 Scale Factor: {scale_factor:.6f}")
+            st.text(f"Translation Vector: {translation}")
+            st.text(f"Rotation Matrix:\n{R_matrix}")
+
 
         with col2:
             if excluded_marks:
