@@ -139,8 +139,7 @@ def compute_calibration(rtk_df, local_df):
 
         # Compute translation
         translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
-        transformed_points = np.dot((local_points - translation), R_matrix)
-
+        transformed_points = np.dot(measured_points, R_matrix.T) + translation
 
         # Compute residuals
         residuals = transformed_points - local_points
