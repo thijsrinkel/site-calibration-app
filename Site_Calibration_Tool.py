@@ -132,11 +132,25 @@ def compute_calibration(rtk_df, local_df):
         centroid_measured = np.mean(measured_points, axis=0)
         centroid_local = np.mean(local_points, axis=0)
 
-        # Center points
+        # Compute slope differences
+        dX = local_points[:, 0] - measured_points[:, 0]  # X difference
+        dY = local_points[:, 1] - measured_points[:, 1]  # Y difference
+        dZ = local_points[:, 2] - measured_points[:, 2]  # Z difference
+
+        # Avoid division by zero
+        dZ[dZ == 0] = np.nan  
+
+        # Compute slope factors (ppm)
+        slope_easting = np.nanmean((dX / dZ) * 1e6)
+        slope_northing = np.nanmean((dY / dZ) * 1e6)
+
+        # Convert slopes to angles
+        roll = np.degrees(np.arctan(slope_easting / 1e6))  # Roll from slope easting
+        pitch = np.degrees(np.arctan(slope_northing / 1e6))  # Pitch from slope northing
+
+        # Compute heading using SVD method
         measured_centered = measured_points - centroid_measured
         local_centered = local_points - centroid_local
-
-        # Singular Value Decomposition (SVD)
         U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
         R_matrix = np.dot(U, Vt)
 
@@ -145,20 +159,13 @@ def compute_calibration(rtk_df, local_df):
             U[:, -1] *= -1
             R_matrix = np.dot(U, Vt)
 
-        # Compute Euler angles
         rotation = R.from_matrix(R_matrix)
         euler_angles = rotation.as_euler('xyz', degrees=True)
-        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
-
-        # Convert Pitch & Roll to Trimble's Slope Easting & Slope Northing (ppm)
-        slope_easting = np.tan(np.radians(roll)) * 1e6
-        slope_northing = np.tan(np.radians(pitch)) * 1e6
-
-        # Compute translation
-        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
-        transformed_points = np.dot(measured_points, R_matrix.T) + translation
+        heading = (euler_angles[2] + 360) % 360  # Ensure heading is 0-360°
 
         # Compute residuals
+        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
+        transformed_points = np.dot(measured_points, R_matrix.T) + translation
         residuals = transformed_points - local_points
         horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
         vertical_residuals = np.abs(residuals[:, 2])
@@ -184,12 +191,12 @@ def compute_calibration(rtk_df, local_df):
 
         residuals = residuals[valid_indices]
 
-    return slope_easting, slope_northing, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
+    return slope_easting, slope_northing, roll, pitch, heading, residuals, excluded_marks, valid_marks
 
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
-    slope_easting, slope_northing, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
+    slope_easting, slope_northing, roll, pitch, heading, residuals, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
 
     if residuals is not None:
         col1, col2 = st.columns(2)
@@ -200,6 +207,9 @@ if st.button("📊 Compute Calibration"):
             st.success(f"🧭 Heading [GRID]: {heading:.4f}°")
 
         with col2:
+            st.success(f"🎯 Roll: {roll:.4f}°")
+            st.success(f"📌 Pitch: {pitch:.4f}°")
+
             if excluded_marks:
                 st.warning(f"🚨 Excluded Reference Marks: {', '.join(excluded_marks)}")
             else:
