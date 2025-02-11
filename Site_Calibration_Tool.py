@@ -72,10 +72,18 @@ def compute_trimble_calibration(rtk_df, local_df):
     optimized_translation = result.x[4:]
     rotation_matrix = R.from_rotvec(optimized_rotation).as_matrix()
 
+    # Ensure correct handedness of rotation
+    if np.linalg.det(rotation_matrix) < 0:
+        rotation_matrix[:, -1] *= -1  # Correct determinant issue
+
     euler_angles = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
     roll, pitch, heading = euler_angles[0], euler_angles[1], (euler_angles[2] + 360) % 360
 
-    return optimized_scale, roll, pitch, heading, optimized_translation
+    # Compute refined translation after applying rotation and scaling
+    transformed_points = optimized_scale * (measured_points @ rotation_matrix.T) + optimized_translation
+    refined_translation = np.mean(local_points - transformed_points, axis=0)
+
+    return optimized_scale, roll, pitch, heading, refined_translation
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
