@@ -103,6 +103,12 @@ with st.sidebar:
         }
     )
     
+import numpy as np
+import pandas as pd
+import streamlit as st
+from scipy.optimize import leastsq
+from scipy.spatial.transform import Rotation as R
+
 def fit_plane(points):
     """Fits a plane to a set of (x, y, z) points and returns the normal vector."""
     X = points[:, :2]  # Take only (Easting, Northing)
@@ -116,10 +122,9 @@ def fit_plane(points):
     # Compute plane normal
     normal = np.array([-A, -B, 1])
     normal /= np.linalg.norm(normal)  # Normalize vector
-    
+
     return A, B, normal
-    
-# Function to Compute Calibration
+
 def compute_calibration(rtk_df, local_df):
     excluded_marks = []
     valid_marks = rtk_df["Reference Mark"].tolist()
@@ -189,15 +194,12 @@ def compute_calibration(rtk_df, local_df):
 
         # Identify worst mark to exclude
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-        excluded_marks.append(valid_marks[worst_index])  # Save correct reference
-        valid_marks.pop(worst_index)
+        excluded_marks.append(valid_marks.pop(worst_index))  # Ensure correct reference is removed
 
-        # Drop the worst index from copies (not original)
+        # Drop the worst index from both arrays
         rtk_data = rtk_data.drop(index=worst_index).reset_index(drop=True)
         local_data = local_data.drop(index=worst_index).reset_index(drop=True)
-
-        residuals = residuals[valid_indices]
-        valid_marks = [valid_marks[i] for i in range(len(valid_marks)) if valid_indices[i]]  # Ensure length matches residuals
+        residuals = np.delete(residuals, worst_index, axis=0)  # Remove corresponding residual
 
     return slope_easting, slope_northing, roll, pitch, heading, residuals, excluded_marks, valid_marks
 
@@ -223,6 +225,20 @@ if st.button("📊 Compute Calibration"):
                 st.warning(f"🚨 Excluded Reference Marks: {', '.join(excluded_marks)}")
             else:
                 st.success("✅ No reference marks were excluded.")
+
+        # Ensure lengths match before creating DataFrame
+        if len(valid_marks) == len(residuals):
+            residuals_df = pd.DataFrame({
+                "Reference Mark": valid_marks,
+                "Horizontal Residual": np.round(np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2), 3),
+                "Vertical Residual": np.round(np.abs(residuals[:, 2]), 3)
+            })
+            st.subheader("📌 Residuals per Reference Mark")
+            st.data_editor(residuals_df, hide_index=True)
+
+            csv = residuals_df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download Residuals as CSV", csv, "residuals.csv", "text/csv")
+
 
         residuals_df = pd.DataFrame({
             "Reference Mark": valid_marks,
