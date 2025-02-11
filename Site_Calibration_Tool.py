@@ -106,14 +106,27 @@ with st.sidebar:
 # Function to Compute Calibration
 def compute_calibration(rtk_df, local_df):
     excluded_marks = []
-    valid_marks = rtk_df["Reference Mark"].tolist()  
+    valid_marks = rtk_df["Reference Mark"].tolist()
+
+    # Convert to numeric and handle errors
+    for col in ["Easting", "Northing", "Height"]:
+        rtk_df[col] = pd.to_numeric(rtk_df[col], errors='coerce')
+
+    for col in ["X", "Y", "Z"]:
+        local_df[col] = pd.to_numeric(local_df[col], errors='coerce')
+
+    # Remove NaN values
+    if rtk_df.isnull().values.any() or local_df.isnull().values.any():
+        st.error("⚠️ Invalid input detected. Please check all values.")
+        return None, None, None, None, None, None, excluded_marks, valid_marks
 
     while len(valid_marks) >= 3:
-        rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
-        local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
+        # Copy DataFrames to avoid modifying originals
+        rtk_data = rtk_df.copy()
+        local_data = local_df.copy()
 
-        measured_points = rtk_df[["Easting", "Northing", "Height"]].values
-        local_points = local_df[["X", "Y", "Z"]].values
+        measured_points = rtk_data[["Easting", "Northing", "Height"]].values
+        local_points = local_data[["X", "Y", "Z"]].values
 
         # Compute centroids
         centroid_measured = np.mean(measured_points, axis=0)
@@ -137,6 +150,10 @@ def compute_calibration(rtk_df, local_df):
         euler_angles = rotation.as_euler('xyz', degrees=True)
         pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
+        # Convert Pitch & Roll to Trimble's Slope Easting & Slope Northing (ppm)
+        slope_easting = np.tan(np.radians(roll)) * 1e6
+        slope_northing = np.tan(np.radians(pitch)) * 1e6
+
         # Compute translation
         translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
         transformed_points = np.dot(measured_points, R_matrix.T) + translation
@@ -158,15 +175,17 @@ def compute_calibration(rtk_df, local_df):
 
         # Identify worst mark to exclude
         worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-        excluded_marks.append(valid_marks.pop(worst_index))
+        excluded_marks.append(valid_marks[worst_index])  # Save correct reference
+        valid_marks.pop(worst_index)
 
-        # Drop the worst index from dataframes
-        rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
-        local_df = local_df.drop(index=worst_index).reset_index(drop=True)
+        # Drop the worst index from copies (not original)
+        rtk_data = rtk_data.drop(index=worst_index).reset_index(drop=True)
+        local_data = local_data.drop(index=worst_index).reset_index(drop=True)
 
         residuals = residuals[valid_indices]
 
-    return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
+    return slope_easting, slope_northing, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
+
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
