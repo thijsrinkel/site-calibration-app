@@ -148,7 +148,7 @@ if rtk_df.empty or local_df.empty:
 
 
         # Singular Value Decomposition (SVD)
-     U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
+    U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
     R_matrix = np.dot(U, Vt)
 
         # Ensure proper rotation (correct determinant sign)
@@ -173,22 +173,22 @@ if rtk_df.empty or local_df.empty:
         # Check which marks exceed threshold
     valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
-        if np.sum(valid_indices) < 3:
-            st.error("⚠️ Too few valid reference marks! At least 3 are required.")
-            return None, None, None, None, None, None, excluded_marks, valid_marks
+    if np.sum(valid_indices) < 3:
+        st.error("⚠️ Too few valid reference marks! At least 3 are required.")
+        return None, None, None, None, None, None, excluded_marks, valid_marks
 
-        if np.all(valid_indices):
-            break  # Exit loop if all marks are valid
+    if np.all(valid_indices):
+        break  # Exit loop if all marks are valid
 
         # Identify worst mark to exclude
-        worst_index = np.argmax(horizontal_residuals + vertical_residuals)
-        excluded_marks.append(valid_marks.pop(worst_index))
+    worst_index = np.argmax(horizontal_residuals + vertical_residuals)
+    excluded_marks.append(valid_marks.pop(worst_index))
 
         # Drop the worst index from dataframes
-        rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
-        local_df = local_df.drop(index=worst_index).reset_index(drop=True)
+    rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
+    local_df = local_df.drop(index=worst_index).reset_index(drop=True)
 
-        residuals = residuals[valid_indices]
+    residuals = residuals[valid_indices]
 
     return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
