@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
 
 st.set_page_config(page_title="Site Calibration Tool", layout="wide")
@@ -21,7 +20,42 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.image("TM_Edison_logo.jpg", width=150)
-st.title("📍 Trimble-Based Site Calibration Tool")
+st.title("📍 Site Calibration Tool")
+
+# 📖 User Guide
+with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
+    st.markdown("""
+    Welcome to the **Site Calibration Tool**! Follow these steps:
+
+    1️⃣ **Enter Your Data:**
+    - Input the Topo measurements (Easting, Northing, Height).
+    - Enter the Local Caisson (QINSY) Coordinates (X, Y, Z).
+
+    2️⃣ **Click 'Compute Calibration':**
+    - The tool will calculate **pitch, roll, heading, and residuals**.
+    - If **Residual of the reference marks exceed the threshold of 0.03**, they are **excluded**.
+
+    3️⃣ **Review the Results:**
+    - The **residuals per reference mark** will be displayed.
+    - Excluded marks will be shown as a warning.
+
+    4️⃣ **Download the Results (Optional):**
+    - Click **"⬇️ Download Residuals as CSV"** to save.
+
+        🌍 **Conventions**
+    - **Roll = Positive** → **Starboard up**.
+    - **Pitch = Positive** → **Bow Up**.
+    - **Heading = Grid north**.
+    - **X = Positive** → **Starboard**.
+    - **Y = Positive** → **Bow**.
+    - **Z = Positive** → **Up**.
+    ---
+    **Tips:**
+    - Ensure that at least **3 valid reference marks** remain after filtering.
+    - If too many reference marks are removed, try adjusting your input data.
+    - Ensure that your values have at least 2 decimals, preferably 3.
+    
+    """)
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
@@ -43,62 +77,128 @@ with st.sidebar:
     })
 
     st.subheader("📍 Enter Topo Measurements")
-    rtk_df = st.data_editor(default_rtk_data, hide_index=True, key="rtk_data")
+    rtk_df = st.data_editor(
+        default_rtk_data,  # Keep "Reference Mark" editable
+        hide_index=True,   # Hides the default Streamlit index
+        key="rtk_data",
+        column_config={
+            "Reference Mark": st.column_config.TextColumn(),  # Editable reference marks
+            "Easting": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Northing": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Height": st.column_config.NumberColumn(format="%.3f", step=0.001),
+        }
+    )
+
     st.subheader("📍 Enter Local Caisson Coordinates")
-    local_df = st.data_editor(default_local_data, hide_index=True, key="local_data")
+    local_df = st.data_editor(
+        default_local_data,  # Keep "Reference Mark" editable
+        hide_index=True,   # Hides the default Streamlit index
+        key="local_data",
+        column_config={
+            "Reference Mark": st.column_config.TextColumn(),  # Editable reference marks
+            "X": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Y": st.column_config.NumberColumn(format="%.3f", step=0.001),
+            "Z": st.column_config.NumberColumn(format="%.3f", step=0.001),
+        }
+    )
 
-# Function to Compute Trimble-Based Calibration
-def compute_trimble_calibration(rtk_df, local_df):
-    if len(rtk_df) < 4:
-        st.error("⚠️ At least 4 reference marks are required for accurate calibration.")
-        return None
 
-    measured_points = rtk_df[["Easting", "Northing", "Height"]].values
-    local_points = local_df[["X", "Y", "Z"]].values
+# Function to Compute Calibration
+def compute_calibration(rtk_df, local_df):
+    excluded_marks = []
+    valid_marks = rtk_df["Reference Mark"].tolist()  
 
-    def residuals(params, measured, local):
-        scale = params[0]
-        rotation_vector = params[1:4]
-        translation_vector = params[4:]
-        rotation_matrix = R.from_rotvec(rotation_vector).as_matrix()
-        transformed_points = scale * (measured @ rotation_matrix.T) + translation_vector
-        return (transformed_points - local).flatten()
+    while len(valid_marks) >= 3:
+        rtk_df[["Easting", "Northing", "Height"]] = rtk_df[["Easting", "Northing", "Height"]].astype(float)
+        local_df[["X", "Y", "Z"]] = local_df[["X", "Y", "Z"]].astype(float)
 
-    # Use Trimble-provided scale factor
-    fixed_scale_factor = np.sum(np.linalg.norm(local_points[1:] - local_points[:-1], axis=1)) / np.sum(np.linalg.norm(measured_points[1:] - measured_points[:-1], axis=1))
-    initial_guess = np.array([fixed_scale_factor, 0.0, 0.0, 0.0, *(np.mean(local_points, axis=0) - np.mean(measured_points, axis=0))])
-    result = least_squares(residuals, initial_guess, args=(measured_points, local_points))
-    
-    optimized_rotation = result.x[1:4]
-    optimized_translation = result.x[4:]
-    rotation_matrix = R.from_rotvec(optimized_rotation).as_matrix()
+        measured_points = rtk_df[["Easting", "Northing", "Height"]].values
+        local_points = local_df[["X", "Y", "Z"]].values
 
-    # Ensure correct handedness of rotation
-    if np.linalg.det(rotation_matrix) < 0:
-        rotation_matrix[:, -1] *= -1  # Correct determinant issue
+        # Compute centroids
+        centroid_measured = np.mean(measured_points, axis=0)
+        centroid_local = np.mean(local_points, axis=0)
 
-    euler_angles = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
-    roll, pitch, heading = euler_angles[0], euler_angles[1], (euler_angles[2] + 360) % 360
+        # Center points
+        measured_centered = measured_points - centroid_measured
+        local_centered = local_points - centroid_local
 
-    # Convert heading to degrees, minutes, seconds format (DMS)
-    heading_deg = int(heading)
-    heading_min = int((heading - heading_deg) * 60)
-    heading_sec = (heading - heading_deg - heading_min / 60) * 3600
-    heading_dms = f"{heading_deg}° {heading_min}' {heading_sec:.2f}\""
+        # Singular Value Decomposition (SVD)
+        U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
+        R_matrix = np.dot(U, Vt)
 
-    # Compute refined translation after applying rotation and scaling
-    transformed_points = fixed_scale_factor * (measured_points @ rotation_matrix.T) + optimized_translation
-    refined_translation = np.mean(local_points - transformed_points, axis=0)
+        # Ensure proper rotation (correct determinant sign)
+        if np.linalg.det(R_matrix) < 0:
+            U[:, -1] *= -1
+            R_matrix = np.dot(U, Vt)
 
-    return fixed_scale_factor, roll, pitch, heading_dms, refined_translation
+        # Compute Euler angles
+        rotation = R.from_matrix(R_matrix)
+        euler_angles = rotation.as_euler('xyz', degrees=True)
+        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
+
+        # Compute translation
+        translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
+        transformed_points = np.dot(measured_points, R_matrix.T) + translation
+
+        # Compute residuals
+        residuals = transformed_points - local_points
+        horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
+        vertical_residuals = np.abs(residuals[:, 2])
+
+        # Check which marks exceed threshold
+        valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
+
+        if np.sum(valid_indices) < 3:
+            st.error("⚠️ Too few valid reference marks! At least 3 are required.")
+            return None, None, None, None, None, None, excluded_marks, valid_marks
+
+        if np.all(valid_indices):
+            break  # Exit loop if all marks are valid
+
+        # Identify worst mark to exclude
+        worst_index = np.argmax(horizontal_residuals + vertical_residuals)
+        excluded_marks.append(valid_marks.pop(worst_index))
+
+        # Drop the worst index from dataframes
+        rtk_df = rtk_df.drop(index=worst_index).reset_index(drop=True)
+        local_df = local_df.drop(index=worst_index).reset_index(drop=True)
+
+        residuals = residuals[valid_indices]
+
+    return pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks
 
 # Compute Calibration Button
 if st.button("📊 Compute Calibration"):
-    result = compute_trimble_calibration(rtk_df, local_df)
-    if result:
-        scale_factor, roll, pitch, heading, translation = result
-        st.success(f"📏 Computed Scale Factor: {scale_factor:.8f}")
-        st.success(f"🌀 Roll: {roll:.4f}°")
-        st.success(f"🚀 Pitch: {pitch:.4f}°")
-        st.success(f"🧭 Heading[GRID]: {heading}")
-        st.success(f"📍 Translation Adjustment: X={translation[0]:.4f}, Y={translation[1]:.4f}, Z={translation[2]:.4f}")
+    pitch, roll, heading, residuals, R_matrix, translation, excluded_marks, valid_marks = compute_calibration(rtk_df, local_df)
+
+    if residuals is not None:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.success(f"🚀 Pitch: {pitch:.4f}°")
+            st.success(f"🌀 Roll: {roll:.4f}°")
+            st.success(f"🧭 Heading[GRID]: {heading:.4f}°")
+
+        with col2:
+            if excluded_marks:
+                st.warning(f"🚨 Excluded Reference Marks: {', '.join(excluded_marks)}")
+            else:
+                st.success("✅ No reference marks were excluded.")
+
+        residuals_df = pd.DataFrame({
+            "Reference Mark": valid_marks,
+            "Horizontal Residual": np.round(np.sqrt(residuals[:, 0]**2 + residuals[:, 1]**2), 3),
+            "Vertical Residual": np.round(np.abs(residuals[:, 2]), 3)
+        })
+
+        st.subheader("📌 Residuals per Reference Mark")
+        st.data_editor(residuals_df, hide_index=True)
+
+        csv = residuals_df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download Residuals as CSV", csv, "residuals.csv", "text/csv")
+
+        with st.expander("🔍 View Raw Residuals"):
+            raw_residuals_df = pd.DataFrame(residuals, columns=["Residual X", "Residual Y", "Residual Z"])
+            raw_residuals_df.insert(0, "Reference Mark", valid_marks)
+            st.dataframe(raw_residuals_df)
