@@ -124,8 +124,8 @@ if rtk_df.empty or local_df.empty:
     return None, None, None, None, None, None, None, None
 
         # Compute centroids
-       centroid_measured = np.mean(measured_points, axis=0)
-       centroid_local = np.mean(local_points, axis=0)
+    centroid_measured = np.mean(measured_points, axis=0)
+    centroid_local = np.mean(local_points, axis=0)
 
       # Compute Scale Factor (S)
         if local_points.size == 0 or np.any(np.isnan(local_points)):
