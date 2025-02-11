@@ -128,50 +128,50 @@ if rtk_df.empty or local_df.empty:
     centroid_local = np.mean(local_points, axis=0)
 
       # Compute Scale Factor (S)
-        if local_points.size == 0 or np.any(np.isnan(local_points)):
-            st.error("🚨 Error: Local coordinate data is missing or contains NaN values.")
-            return None, None, None, None, None, None, None, None
+    if local_points.size == 0 or np.any(np.isnan(local_points)):
+        st.error("🚨 Error: Local coordinate data is missing or contains NaN values.")
+        return None, None, None, None, None, None, None, None
 
-        if local_centered.size == 0 or np.any(np.isnan(local_centered)):
-            st.error("🚨 Error: Computed local-centered data is invalid (empty or NaN).")
-            return None, None, None, None, None, None, None, None
+    if local_centered.size == 0 or np.any(np.isnan(local_centered)):
+        st.error("🚨 Error: Computed local-centered data is invalid (empty or NaN).")
+        return None, None, None, None, None, None, None, None
 
 
-        denominator = np.sum(np.linalg.norm(local_centered, axis=1))
-        if denominator == 0:  # Avoid division by zero
-            scale_factor = 1.0  # Default to no scaling if local_centered is degenerate
-        else:
-            scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / denominator
+    denominator = np.sum(np.linalg.norm(local_centered, axis=1))
+    if denominator == 0:  # Avoid division by zero
+        scale_factor = 1.0  # Default to no scaling if local_centered is degenerate
+    else:
+        scale_factor = np.sum(np.linalg.norm(measured_centered, axis=1)) / denominator
 
         # Apply scaling to local points
-        local_centered *= scale_factor
+    local_centered *= scale_factor
 
 
         # Singular Value Decomposition (SVD)
-        U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
-        R_matrix = np.dot(U, Vt)
+     U, S, Vt = np.linalg.svd(np.dot(local_centered.T, measured_centered))
+    R_matrix = np.dot(U, Vt)
 
         # Ensure proper rotation (correct determinant sign)
-        if np.linalg.det(R_matrix) < 0:
-            U[:, -1] *= -1
-            R_matrix = np.dot(U, Vt)
+    if np.linalg.det(R_matrix) < 0:
+        U[:, -1] *= -1
+        R_matrix = np.dot(U, Vt)
 
         # Compute Euler angles
-        rotation = R.from_matrix(R_matrix)
-        euler_angles = rotation.as_euler('xyz', degrees=True)
-        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
+    rotation = R.from_matrix(R_matrix)
+    euler_angles = rotation.as_euler('xyz', degrees=True)
+    pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
         # Compute translation
-        translation = centroid_measured - np.dot(centroid_local, R_matrix.T) * scale_factor
-        transformed_points = np.dot(local_points * scale_factor, R_matrix.T) + translation
+    translation = centroid_measured - np.dot(centroid_local, R_matrix.T) * scale_factor
+    transformed_points = np.dot(local_points * scale_factor, R_matrix.T) + translation
 
         # Compute residuals
-        residuals = transformed_points - local_points
-        horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
-        vertical_residuals = np.abs(residuals[:, 2])
+    residuals = transformed_points - local_points
+    horizontal_residuals = np.linalg.norm(residuals[:, :2], axis=1)
+    vertical_residuals = np.abs(residuals[:, 2])
 
         # Check which marks exceed threshold
-        valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
+    valid_indices = (horizontal_residuals <= 0.030) & (vertical_residuals <= 0.030)
 
         if np.sum(valid_indices) < 3:
             st.error("⚠️ Too few valid reference marks! At least 3 are required.")
