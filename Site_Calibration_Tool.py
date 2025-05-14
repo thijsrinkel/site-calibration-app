@@ -59,7 +59,7 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
 
 # 📌 Sidebar for Inputs
 with st.sidebar:
-    st.image("TM_Edison_logo.jpg", width=150)
+    st.image("TR-offshore-survey-logo-1-200x75.png", width=200)
     st.header("🔧 Input Calibration Data")
 
     default_rtk_data = pd.DataFrame({
