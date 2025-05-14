@@ -43,7 +43,7 @@ with st.expander("ℹ️ **How to Use This Tool**", expanded=False):
     - Click **"⬇️ Download Residuals as CSV"** to save.
 
         🌍 **Conventions**
-    - **Roll = Positive** → **Starboard Down**.
+    - **Roll = Positive** → **Heeling to Starboard**.
     - **Pitch = Positive** → **Bow Up**.
     - **Heading = Grid north**.
     - **X = Positive** → **Starboard**.
