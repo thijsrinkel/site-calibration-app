@@ -134,8 +134,8 @@ def compute_calibration(rtk_df, local_df):
 
         # Compute Euler angles
         rotation = R.from_matrix(R_matrix)
-        euler_angles = rotation.as_euler('xyz', degrees=True)
-        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
+        euler_angles = rotation.as_euler('yxz', degrees=True)
+        roll, pitch, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
 
         # Compute translation
         translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
