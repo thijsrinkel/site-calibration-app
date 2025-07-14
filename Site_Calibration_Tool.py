@@ -132,10 +132,20 @@ def compute_calibration(rtk_df, local_df):
             U[:, -1] *= -1
             R_matrix = np.dot(U, Vt)
 
-        # Compute Euler angles
+        # Step 1: Full rotation from measured to local
         rotation = R.from_matrix(R_matrix)
-        euler_angles = rotation.as_euler('xyz', degrees=True)
-        pitch, roll, heading = euler_angles[1], euler_angles[0], (euler_angles[2] + 360) % 360
+
+        # Step 2: Extract heading (rotation around Z in global frame)
+        heading_rad = rotation.as_euler('xyz', degrees=False)[2]
+        heading = np.degrees(heading_rad) % 360
+
+        # Step 3: Remove heading (rotate back to vessel frame)
+        # In quaternion form: R_heading_inv * R_full
+        deheaded_rotation = R.from_euler('z', -heading_rad) * rotation
+
+        # Step 4: Extract pitch and roll in vessel-aligned frame
+        # Now in 'yx' order: pitch about Y (bow), roll about X (starboard)
+        pitch, roll = deheaded_rotation.as_euler('yx', degrees=True)
 
         # Compute translation
         translation = centroid_local - np.dot(centroid_measured, R_matrix.T)
